@@ -36,7 +36,7 @@ pub fn create(b: *std.Build, target: std.Build.ResolvedTarget, kind: Kind) *Comp
     const source_path = write_files.add(
         switch (kind) {
             .exe => "compilecheck-exe.c",
-            .header => "copmilecheck-header.c",
+            .header => "compilecheck-header.c",
         },
         source_duped,
     );
@@ -159,6 +159,13 @@ fn make(step: *std.Build.Step, options: std.Build.Step.MakeOptions) anyerror!voi
         try zig_args.append("-target");
         try zig_args.append(try check.target.query.zigTriple(b.allocator));
         try zig_args.append(source_path);
+        switch (check.kind) {
+            .exe => {
+                try zig_args.append("--cache-dir");
+                try zig_args.append(b.cache_root.path orelse ".");
+            },
+            .header => try zig_args.append("-fno-emit-bin"),
+        }
         for (check.include_dirs.items) |include_dir| {
             try include_dir.appendZigProcessFlags(b, &zig_args, step);
         }
