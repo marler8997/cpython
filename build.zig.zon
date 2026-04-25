@@ -27,8 +27,10 @@
     .paths = .{
         "build.zig",
         "build.zig.zon",
+        "configquery.zig",
         "makesetup.zig",
         "replace.zig",
-        "CompileCheck.zig",
+        "ConfigHeaderExt.zig",
+        "config-*",
     },
 }

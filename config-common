@@ -1,0 +1,528 @@
+################################################################################
+# Headers
+################################################################################
+HAVE_ALLOCA_H ? 1|undef include=alloca.h
+HAVE_ASM_TYPES_H ? 1|undef include=asm/types.h
+HAVE_BLUETOOTH_H ? 1|undef include=bluetooth.h
+HAVE_BLUETOOTH_BLUETOOTH_H ? 1|undef include=bluetooth/bluetooth.h
+HAVE_BZLIB_H ? 1|undef include=bzlib.h
+HAVE_CONIO_H ? 1|undef include=conio.h
+HAVE_CRYPT_H ? 1|undef include=crypt.h
+HAVE_CURSES_H ? 1|undef include=curses.h
+HAVE_DIRECT_H ? 1|undef include=direct.h
+HAVE_DIRENT_H ? 1|undef include=dirent.h
+HAVE_DB_H ? 1|undef include=db.h
+HAVE_DLFCN_H ? 1|undef include=dlfcn.h
+HAVE_ENDIAN_H ? 1|undef include=endian.h
+HAVE_ERRNO_H ? 1|undef include=errno.h
+HAVE_FCNTL_H ? 1|undef include=fcntl.h
+HAVE_GDBM_DASH_NDBM_H ? 1|undef include=gdbm-ndbm.h
+HAVE_GDBM_H ? 1|undef include=gdbm.h
+HAVE_GDBM_NDBM_H ? 1|undef include=gdbm/ndbm.h
+HAVE_GRP_H ? 1|undef include=grp.h
+HAVE_IEEEFP_H ? 1|undef include=ieeefp.h
+HAVE_IO_H ? 1|undef include=io.h
+HAVE_INTTYPES_H ? 1|undef include=inttypes.h
+HAVE_LANGINFO_H ? 1|undef include=langinfo.h
+HAVE_LIBINTL_H ? 1|undef include=libintl.h
+HAVE_LIBUTIL_H ? 1|undef include=libutil.h
+HAVE_LINUX_LIMITS_H ? 1|undef include=linux/limits.h
+HAVE_NETDB_H ? 1|undef include=netdb.h
+HAVE_NETINET_IN_H ? 1|undef include=netinet/in.h
+HAVE_NETPACKET_PACKET_H ? 1|undef include=netpacket/packet.h
+HAVE_NET_IF_H ? 1|undef include=net/if.h
+HAVE_POLL_H ? 1|undef include=poll.h
+HAVE_PTHREAD_H ? 1|undef include=pthread.h
+HAVE_PTY_H ? 1|undef include=pty.h
+HAVE_SCHED_H ? 1|undef include=sched.h
+HAVE_SETJMP_H ? 1|undef include=setjmp.h
+HAVE_SHADOW_H ? 1|undef include=shadow.h
+HAVE_SIGNAL_H ? 1|undef include=signal.h
+HAVE_SPAWN_H ? 1|undef include=spawn.h
+HAVE_STDINT_H ? 1|undef include=stdint.h
+HAVE_STDLIB_H ? 1|undef include=stdlib.h
+HAVE_STRINGS_H ? 1|undef include=strings.h
+HAVE_STRING_H ? 1|undef include=string.h
+HAVE_SYSEXITS_H ? 1|undef include=sysexits.h
+HAVE_SYSLOG_H ? 1|undef include=syslog.h
+HAVE_SYS_AUXV_H ? 1|undef include=sys/auxv.h
+HAVE_SYS_EPOLL_H ? 1|undef include=sys/epoll.h
+HAVE_SYS_EVENTFD_H ? 1|undef include=sys/eventfd.h
+HAVE_SYS_FILE_H ? 1|undef include=sys/file.h
+HAVE_SYS_IOCTL_H ? 1|undef include=sys/ioctl.h
+HAVE_SYS_MMAN_H ? 1|undef include=sys/mman.h
+HAVE_SYS_PARAM_H ? 1|undef include=sys/param.h
+HAVE_SYS_POLL_H ? 1|undef include=sys/poll.h
+HAVE_SYS_RANDOM_H ? 1|undef include=sys/random.h
+HAVE_SYS_RESOURCE_H ? 1|undef include=sys/resource.h
+HAVE_SYS_SELECT_H ? 1|undef include=sys/select.h
+HAVE_SYS_SENDFILE_H ? 1|undef include=sys/sendfile.h
+HAVE_SYS_SOCKET_H ? 1|undef include=sys/socket.h
+HAVE_SYS_SOUNDCARD_H ? 1|undef include=sys/soundcard.h
+HAVE_SYS_STATVFS_H ? 1|undef include=sys/statvfs.h
+HAVE_SYS_STAT_H ? 1|undef include=sys/stat.h
+HAVE_SYS_SYSCALL_H ? 1|undef include=sys/syscall.h
+HAVE_SYS_SYSMACROS_H ? 1|undef include=sys/sysmacros.h
+HAVE_SYS_TIMES_H ? 1|undef include=sys/times.h
+HAVE_SYS_TIME_H ? 1|undef include=sys/time.h
+HAVE_SYS_TYPES_H ? 1|undef include=sys/types.h
+HAVE_SYS_UIO_H ? 1|undef include=sys/uio.h
+HAVE_SYS_UN_H ? 1|undef include=sys/un.h
+HAVE_SYS_UTSNAME_H ? 1|undef include=sys/utsname.h
+HAVE_SYS_WAIT_H ? 1|undef include=sys/wait.h
+HAVE_SYS_XATTR_H ? 1|undef include=sys/xattr.h
+HAVE_TERMIOS_H ? 1|undef include=termios.h
+HAVE_UNISTD_H ? 1|undef include=unistd.h
+HAVE_UTIME_H ? 1|undef include=utime.h
+HAVE_UTMP_H ? 1|undef include=utmp.h
+HAVE_WCHAR_H ? 1|undef include=wchar.h
+HAVE_LZMA_H ? 1|undef include=lzma.h
+HAVE_NCURSES_H ? 1|undef include=ncurses.h
+HAVE_NDBM_H ? 1|undef include=ndmb.h
+HAVE_NDIR_H ? 1|undef include=ndir.h
+HAVE_NETCAN_CAN_H ? 1|undef include=netcan/can.h
+HAVE_PROCESS_H ? 1|undef include=process.h
+HAVE_RPC_RPC_H ? 1|undef include=rpc/rpc.h
+HAVE_STROPTS_H ? 1|undef include=stropts.h
+HAVE_SYS_AUDIOIO_H ? 1|undef include=sys/audioio.h
+HAVE_SYS_BSDTTY_H ? 1|undef include=sys/bsdtty.h
+HAVE_SYS_DEVPOLL_H ? 1|undef include=sys/devpoll.h
+HAVE_SYS_DIR_H ? 1|undef include=sys/dir.h
+HAVE_SYS_ENDIAN_H ? 1|undef include=sys/endian.h
+HAVE_SYS_EVENT_H ? 1|undef include=sys/event.h
+HAVE_SYS_KERN_CONTROL_H ? 1|undef include=sys/kern/contro.h
+HAVE_SYS_LOADAVG_H ? 1|undef include=sys/loadavg.h
+HAVE_SYS_LOCK_H ? 1|undef include=sys/lock.h
+HAVE_SYS_MEMFD_H ? 1|undef include=sys/memfd.h
+HAVE_SYS_MKDEV_H ? 1|undef include=sys/mkdev.h
+HAVE_SYS_MODEM_H ? 1|undef include=sys/modem.h
+HAVE_SYS_NDIR_H ? 1|undef include=sys/ndir.h
+HAVE_SYS_SYS_DOMAIN_H ? 1|undef include=sys/sys/domain.h
+HAVE_SYS_TERMIO_H ? 1|undef include=sys/termio.h
+HAVE_TERM_H ? 1|undef include=term.h
+HAVE_UTIL_H ? 1|undef include=util.h
+HAVE_UUID_H ? 1|undef include=uuid.h
+HAVE_UUID_UUID_H ? 1|undef include=uuid/uuid.h
+HAVE_ZLIB_H ? 1|undef include=zlib.h
+
+################################################################################
+# Functions
+################################################################################
+HAVE_ACCEPT ? 1|undef include=sys/socket.h int main(){accept(0, 0, 0);}
+HAVE_ACCEPT4 ? 1|undef include=sys/socket.h int main(){accept4(0, 0, 0, 0);}
+HAVE_ACOSH ? 1|undef include=math.h int main(){acosh(1.0);}
+HAVE_ALARM ? 1|undef include=unistd.h int main(){alarm(1);}
+HAVE_ASINH ? 1|undef include=math.h int main(){asinh(1.0);}
+HAVE_ATANH ? 1|undef include=math.h int main(){atanh(0.5);}
+HAVE_BIND ? 1|undef include=sys/socket.h int main(){bind(0, 0, 0);}
+HAVE_BIND_TEXTDOMAIN_CODESET ? 1|undef include=libintl.h int main(){bind_textdomain_codeset(0, 0);}
+HAVE_CHMOD ? 1|undef include=sys/stat.h int main(){chmod(0, 0);}
+HAVE_CHOWN ? 1|undef include=unistd.h int main(){chown(0, 0, 0);}
+HAVE_CLOCK ? 1|undef include=time.h int main(){clock();}
+HAVE_CLOCK_GETRES ? 1|undef include=time.h int main(){struct timespec ts; clock_getres(CLOCK_REALTIME, &ts);}
+HAVE_CLOCK_GETTIME ? 1|undef include=time.h int main(){struct timespec ts; clock_gettime(CLOCK_REALTIME, &ts);}
+HAVE_CLOCK_NANOSLEEP ? 1|undef include=time.h int main(){struct timespec ts = {0, 0}; clock_nanosleep(CLOCK_REALTIME, 0, &ts, 0);}
+HAVE_CLOCK_SETTIME ? 1|undef include=time.h int main(){struct timespec ts = {0, 0}; clock_settime(CLOCK_REALTIME, &ts);}
+HAVE_CLOSE_RANGE ? 1|undef define=_GNU_SOURCE include=unistd.h int main(){close_range(0, 0, 0);}
+HAVE_CONFSTR ? 1|undef include=unistd.h int main(){confstr(0, 0, 0);}
+HAVE_CONNECT ? 1|undef include=sys/socket.h int main(){connect(0, 0, 0);}
+HAVE_COPY_FILE_RANGE ? 1|undef include=unistd.h int main(){copy_file_range(0, 0, 0, 0, 0, 0);}
+HAVE_CTERMID ? 1|undef include=stdio.h int main(){ctermid(0);}
+HAVE_DLOPEN ? 1|undef include=dlfcn.h int main(){dlopen(0, 0);}
+HAVE_DUP ? 1|undef include=unistd.h int main(){dup(0);}
+HAVE_DUP2 ? 1|undef include=unistd.h int main(){dup2(0, 0);}
+HAVE_DUP3 ? 1|undef include=unistd.h int main(){dup3(0, 0, 0);}
+HAVE_EPOLL_CREATE1 ? 1|undef include=sys/epoll.h int main(){epoll_create1(0);}
+HAVE_ERF ? 1|undef include=math.h int main(){erf(1.0);}
+HAVE_ERFC ? 1|undef include=math.h int main(){erfc(1.0);}
+HAVE_EVENTFD ? 1|undef include=sys/eventfd.h int main(){eventfd(0, 0);}
+HAVE_EXECV ? 1|undef include=unistd.h int main(){execv(0, 0);}
+HAVE_EXPLICIT_BZERO ? 1|undef include=strings.h int main(){explicit_bzero(0, 0);}
+HAVE_EXPM1 ? 1|undef include=math.h int main(){expm1(1.0);}
+HAVE_FACCESSAT ? 1|undef include=unistd.h int main(){faccessat(0, 0, 0, 0);}
+HAVE_FCHDIR ? 1|undef include=unistd.h int main(){fchdir(0);}
+HAVE_FCHMOD ? 1|undef include=sys/stat.h int main(){fchmod(0, 0);}
+HAVE_FCHMODAT ? 1|undef include=sys/stat.h int main(){fchmodat(0, 0, 0, 0);}
+HAVE_FCHOWN ? 1|undef include=unistd.h int main(){fchown(0, 0, 0);}
+HAVE_FCHOWNAT ? 1|undef include=unistd.h int main(){fchownat(0, 0, 0, 0, 0);}
+HAVE_FDATASYNC ? 1|undef include=unistd.h int main(){fdatasync(0);}
+HAVE_FDOPENDIR ? 1|undef include=dirent.h int main(){fdopendir(0);}
+HAVE_FEXECVE ? 1|undef include=unistd.h int main(){fexecve(0, 0, 0);}
+HAVE_FLOCK ? 1|undef include=sys/file.h int main(){flock(0, 0);}
+HAVE_FORK ? 1|undef include=unistd.h int main(){fork();}
+HAVE_FORKPTY ? 1|undef include=pty.h int main(){forkpty(0, 0, 0, 0);}
+HAVE_FPATHCONF ? 1|undef include=unistd.h int main(){fpathconf(0, 0);}
+HAVE_FSEEKO ? 1|undef include=stdio.h int main(){fseeko(0, 0, 0);}
+HAVE_FSTATAT ? 1|undef include=sys/stat.h int main(){struct stat st; fstatat(0, 0, &st, 0);}
+HAVE_FSTATVFS ? 1|undef include=sys/statvfs.h int main(){struct statvfs st; fstatvfs(0, &st);}
+HAVE_FSYNC ? 1|undef include=unistd.h int main(){fsync(0);}
+HAVE_FTELLO ? 1|undef include=stdio.h int main(){ftello(0);}
+HAVE_FTIME ? 1|undef include=sys/timeb.h int main(){struct timeb tb; ftime(&tb);}
+HAVE_FTRUNCATE ? 1|undef include=unistd.h int main(){ftruncate(0, 0);}
+HAVE_FUTIMENS ? 1|undef include=sys/stat.h int main(){futimens(0, 0);}
+HAVE_FUTIMES ? 1|undef include=sys/time.h int main(){futimes(0, 0);}
+HAVE_FUTIMESAT ? 1|undef include=sys/time.h int main(){futimesat(0, 0, 0);}
+HAVE_GAI_STRERROR ? 1|undef include=netdb.h int main(){gai_strerror(0);}
+HAVE_GETADDRINFO ? 1|undef include=netdb.h int main(){getaddrinfo(0, 0, 0, 0);}
+HAVE_GETC_UNLOCKED ? 1|undef include=stdio.h int main(){getc_unlocked((FILE*)0);}
+HAVE_GETEGID ? 1|undef include=unistd.h int main(){getegid();}
+HAVE_GETENTROPY ? 1|undef include=unistd.h int main(){getentropy(0, 0);}
+HAVE_GETEUID ? 1|undef include=unistd.h int main(){geteuid();}
+HAVE_GETGID ? 1|undef include=unistd.h int main(){getgid();}
+HAVE_GETGRGID ? 1|undef include=grp.h int main(){getgrgid(0);}
+HAVE_GETGRGID_R ? 1|undef include=grp.h int main(){struct group grp; char buf[1024]; struct group *result; getgrgid_r(0, &grp, buf, sizeof(buf), &result);}
+HAVE_GETGRNAM_R ? 1|undef include=grp.h int main(){struct group grp; char buf[1024]; struct group *result; getgrnam_r(0, &grp, buf, sizeof(buf), &result);}
+HAVE_GETGROUPLIST ? 1|undef include=grp.h int main(){int groups; int ngroups = 1; getgrouplist(0, 0, &groups, &ngroups);}
+HAVE_GETGROUPS ? 1|undef include=unistd.h int main(){getgroups(0, 0);}
+HAVE_GETHOSTBYADDR ? 1|undef include=netdb.h int main(){gethostbyaddr(0, 0, 0);}
+HAVE_GETHOSTBYNAME ? 1|undef include=netdb.h int main(){gethostbyname(0);}
+HAVE_GETHOSTBYNAME_R ? 1|undef include=netdb.h int main(){struct hostent he; char buf[1024]; struct hostent *result; int h_errno; gethostbyname_r(0, &he, buf, sizeof(buf), &result, &h_errno);}
+HAVE_GETHOSTNAME ? 1|undef include=unistd.h int main(){gethostname(0, 0);}
+HAVE_GETITIMER ? 1|undef include=sys/time.h int main(){struct itimerval it; getitimer(0, &it);}
+HAVE_GETLOADAVG ? 1|undef include=stdlib.h int main(){double loadavg[3]; getloadavg(loadavg, 3);}
+HAVE_GETLOGIN ? 1|undef include=unistd.h int main(){getlogin();}
+HAVE_GETNAMEINFO ? 1|undef include=netdb.h int main(){getnameinfo(0, 0, 0, 0, 0, 0, 0);}
+HAVE_GETPAGESIZE ? 1|undef include=unistd.h int main(){getpagesize();}
+HAVE_GETPEERNAME ? 1|undef include=sys/socket.h int main(){getpeername(0, 0, 0);}
+HAVE_GETPGID ? 1|undef include=unistd.h int main(){getpgid(0);}
+HAVE_GETPID ? 1|undef include=unistd.h int main(){getpid();}
+HAVE_GETPPID ? 1|undef include=unistd.h int main(){getppid();}
+HAVE_GETPRIORITY ? 1|undef include=sys/resource.h int main(){getpriority(0, 0);}
+HAVE_GETPROTOBYNAME ? 1|undef include=netdb.h int main(){getprotobyname(0);}
+HAVE_GETPWENT ? 1|undef include=pwd.h int main(){getpwent();}
+HAVE_GETPWNAM_R ? 1|undef include=pwd.h int main(){struct passwd pw; char buf[1024]; struct passwd *result; getpwnam_r(0, &pw, buf, sizeof(buf), &result);}
+HAVE_GETPWUID ? 1|undef include=pwd.h int main(){getpwuid(0);}
+HAVE_GETPWUID_R ? 1|undef include=pwd.h int main(){struct passwd pw; char buf[1024]; struct passwd *result; getpwuid_r(0, &pw, buf, sizeof(buf), &result);}
+HAVE_GETRANDOM ? 1|undef include=sys/random.h int main(){getrandom(0, 0, 0);}
+HAVE_GETRESGID ? 1|undef include=unistd.h int main(){gid_t rgid, egid, sgid; getresgid(&rgid, &egid, &sgid);}
+HAVE_GETRESUID ? 1|undef define=_GNU_SOURCE include=unistd.h int main(){uid_t ruid, euid, suid; getresuid(&ruid, &euid, &suid);}
+HAVE_GETRUSAGE ? 1|undef include=sys/resource.h int main(){struct rusage ru; getrusage(0, &ru);}
+HAVE_GETSERVBYNAME ? 1|undef include=netdb.h int main(){getservbyname(0, 0);}
+HAVE_GETSERVBYPORT ? 1|undef include=netdb.h int main(){getservbyport(0, 0);}
+HAVE_GETSID ? 1|undef include=unistd.h int main(){getsid(0);}
+HAVE_GETSOCKNAME ? 1|undef include=sys/socket.h int main(){getsockname(0, 0, 0);}
+HAVE_GETSPENT ? 1|undef include=shadow.h int main(){getspent();}
+HAVE_GETSPNAM ? 1|undef include=shadow.h int main(){getspnam(0);}
+HAVE_GETUID ? 1|undef include=unistd.h int main(){getuid();}
+HAVE_GETWD ? 1|undef include=unistd.h int main(){getwd(0);}
+HAVE_HSTRERROR ? 1|undef include=netdb.h int main(){hstrerror(0);}
+HAVE_HTOLE64 ? 1|undef include=endian.h int main(){htole64(0);}
+HAVE_IF_NAMEINDEX ? 1|undef include=net/if.h int main(){if_nameindex();}
+HAVE_INET_ATON ? 1|undef include=arpa/inet.h int main(){struct in_addr addr; inet_aton(0, &addr);}
+HAVE_INET_NTOA ? 1|undef include=arpa/inet.h int main(){struct in_addr addr; inet_ntoa(addr);}
+HAVE_INET_PTON ? 1|undef include=arpa/inet.h int main(){inet_pton(0, 0, 0);}
+HAVE_INITGROUPS ? 1|undef include=grp.h int main(){initgroups(0, 0);}
+HAVE_KILL ? 1|undef include=signal.h int main(){kill(0, 0);}
+HAVE_KILLPG ? 1|undef include=signal.h int main(){killpg(0, 0);}
+HAVE_LCHOWN ? 1|undef include=unistd.h int main(){lchown(0, 0, 0);}
+HAVE_LINK ? 1|undef include=unistd.h int main(){link(0, 0);}
+HAVE_LINKAT ? 1|undef include=unistd.h int main(){linkat(0, 0, 0, 0, 0);}
+HAVE_LISTEN ? 1|undef include=sys/socket.h int main(){listen(0, 0);}
+HAVE_LOCKF ? 1|undef include=unistd.h int main(){lockf(0, 0, 0);}
+HAVE_LOG1P ? 1|undef include=math.h int main(){log1p(1.0);}
+HAVE_LOG2 ? 1|undef include=math.h int main(){log2(2.0);}
+HAVE_LOGIN_TTY ? 1|undef include=utmp.h int main(){login_tty(0);}
+HAVE_LSTAT ? 1|undef include=sys/stat.h int main(){struct stat st; lstat(0, &st);}
+HAVE_LUTIMES ? 1|undef include=sys/time.h int main(){lutimes(0, 0);}
+HAVE_MADVISE ? 1|undef include=sys/mman.h int main(){madvise(0, 0, 0);}
+HAVE_MAKEDEV ? 1|undef include=sys/types.h int main(){makedev(0, 0);}
+HAVE_MBRTOWC ? 1|undef include=wchar.h int main(){wchar_t wc; mbrtowc(&wc, 0, 0, 0);}
+HAVE_MEMFD_CREATE ? 1|undef include=sys/mman.h int main(){memfd_create(0, 0);}
+HAVE_MEMRCHR ? 1|undef include=string.h int main(){memrchr(0, 0, 0);}
+HAVE_MKDIRAT ? 1|undef include=sys/stat.h int main(){mkdirat(0, 0, 0);}
+HAVE_MKFIFO ? 1|undef include=sys/stat.h int main(){mkfifo(0, 0);}
+HAVE_MKFIFOAT ? 1|undef include=sys/stat.h int main(){mkfifoat(0, 0, 0);}
+HAVE_MKNOD ? 1|undef include=sys/stat.h int main(){mknod(0, 0, 0);}
+HAVE_MKNODAT ? 1|undef include=sys/stat.h int main(){mknodat(0, 0, 0, 0);}
+HAVE_MKTIME ? 1|undef include=time.h int main(){struct tm tm; mktime(&tm);}
+HAVE_MMAP ? 1|undef include=sys/mman.h int main(){mmap(0, 0, 0, 0, 0, 0);}
+HAVE_MREMAP ? 1|undef define=_GNU_SOURCE include=sys/mman.h int main(){mremap(0, 0, 0, 0);}
+HAVE_NANOSLEEP ? 1|undef include=time.h int main(){struct timespec ts = {0, 0}; nanosleep(&ts, 0);}
+HAVE_NICE ? 1|undef include=unistd.h int main(){nice(0);}
+HAVE_OPENAT ? 1|undef include=fcntl.h int main(){openat(0, 0, 0);}
+HAVE_OPENDIR ? 1|undef include=dirent.h int main(){opendir(0);}
+HAVE_OPENPTY ? 1|undef include=pty.h int main(){openpty(0, 0, 0, 0, 0);}
+HAVE_PATHCONF ? 1|undef include=unistd.h int main(){pathconf(0, 0);}
+HAVE_PAUSE ? 1|undef include=unistd.h int main(){pause();}
+HAVE_PIPE ? 1|undef include=unistd.h int main(){int pipefd[2]; pipe(pipefd);}
+HAVE_PIPE2 ? 1|undef include=unistd.h int main(){int pipefd[2]; pipe2(pipefd, 0);}
+HAVE_POLL ? 1|undef include=poll.h int main(){poll(0, 0, 0);}
+HAVE_POSIX_FADVISE ? 1|undef include=fcntl.h int main(){posix_fadvise(0, 0, 0, 0);}
+HAVE_POSIX_FALLOCATE ? 1|undef include=fcntl.h int main(){posix_fallocate(0, 0, 0);}
+HAVE_POSIX_SPAWN ? 1|undef include=spawn.h int main(){posix_spawn(0, 0, 0, 0, 0, 0);}
+HAVE_POSIX_SPAWNP ? 1|undef include=spawn.h int main(){posix_spawnp(0, 0, 0, 0, 0, 0);}
+HAVE_PREAD ? 1|undef include=unistd.h int main(){pread(0, 0, 0, 0);}
+HAVE_PREADV ? 1|undef include=sys/uio.h int main(){preadv(0, 0, 0, 0);}
+HAVE_PREADV2 ? 1|undef include=sys/uio.h int main(){preadv2(0, 0, 0, 0, 0);}
+HAVE_PRLIMIT ? 1|undef include=sys/time.h,sys/resource.h int main(){prlimit(0, 0, 0, 0);}
+HAVE_PTHREAD_KILL ? 1|undef include=signal.h int main(){pthread_kill(0, 0);}
+HAVE_PTHREAD_SIGMASK ? 1|undef include=pthread.h int main(){pthread_sigmask(0, 0, 0);}
+HAVE_PWRITE ? 1|undef include=unistd.h int main(){pwrite(0, 0, 0, 0);}
+HAVE_PWRITEV ? 1|undef include=sys/uio.h int main(){pwritev(0, 0, 0, 0);}
+HAVE_PWRITEV2 ? 1|undef include=sys/uio.h int main(){pwritev2(0, 0, 0, 0, 0);}
+HAVE_READLINK ? 1|undef include=unistd.h int main(){readlink(0, 0, 0);}
+HAVE_READLINKAT ? 1|undef include=unistd.h int main(){readlinkat(0, 0, 0, 0);}
+HAVE_READV ? 1|undef include=sys/uio.h int main(){readv(0, 0, 0);}
+HAVE_REALPATH ? 1|undef include=stdlib.h int main(){realpath(0, 0);}
+HAVE_RECVFROM ? 1|undef include=sys/socket.h int main(){recvfrom(0, 0, 0, 0, 0, 0);}
+HAVE_RENAMEAT ? 1|undef include=stdio.h int main(){renameat(0, 0, 0, 0);}
+HAVE_SCHED_GET_PRIORITY_MAX ? 1|undef include=sched.h int main(){sched_get_priority_max(0);}
+HAVE_SCHED_RR_GET_INTERVAL ? 1|undef include=sched.h int main(){struct timespec ts; sched_rr_get_interval(0, &ts);}
+HAVE_SCHED_SETAFFINITY ? 1|undef define=_GNU_SOURCE include=sched.h int main(){sched_setaffinity(0, 0, 0);}
+HAVE_SCHED_SETPARAM ? 1|undef include=sched.h int main(){struct sched_param sp; sched_setparam(0, &sp);}
+HAVE_SCHED_SETSCHEDULER ? 1|undef include=sched.h int main(){struct sched_param sp; sched_setscheduler(0, 0, &sp);}
+HAVE_SEM_CLOCKWAIT ? 1|undef include=semaphore.h int main(){sem_clockwait(0, 0, 0);}
+HAVE_SEM_GETVALUE ? 1|undef include=semaphore.h int main(){sem_getvalue(0, 0);}
+HAVE_SEM_OPEN ? 1|undef include=semaphore.h int main(){sem_open(0, 0);}
+HAVE_SEM_TIMEDWAIT ? 1|undef include=semaphore.h int main(){sem_timedwait(0, 0);}
+HAVE_SEM_UNLINK ? 1|undef include=semaphore.h int main(){sem_unlink(0);}
+HAVE_SENDFILE ? 1|undef include=sys/sendfile.h int main(){sendfile(0, 0, 0, 0);}
+HAVE_SENDTO ? 1|undef include=sys/socket.h int main(){sendto(0, 0, 0, 0, 0, 0);}
+HAVE_SETEGID ? 1|undef include=unistd.h int main(){setegid(0);}
+HAVE_SETEUID ? 1|undef include=unistd.h int main(){seteuid(0);}
+HAVE_SETGID ? 1|undef include=unistd.h int main(){setgid(0);}
+HAVE_SETGROUPS ? 1|undef include=grp.h int main(){setgroups(0, 0);}
+HAVE_SETHOSTNAME ? 1|undef include=unistd.h int main(){sethostname(0, 0);}
+HAVE_SETITIMER ? 1|undef include=sys/time.h int main(){struct itimerval it; setitimer(0, &it, 0);}
+HAVE_SETLOCALE ? 1|undef include=locale.h int main(){setlocale(0, 0);}
+HAVE_SETPGID ? 1|undef include=unistd.h int main(){setpgid(0, 0);}
+HAVE_SETPGRP ? 1|undef include=unistd.h int main(){setpgrp();}
+HAVE_SETPRIORITY ? 1|undef include=sys/resource.h int main(){setpriority(0, 0, 0);}
+HAVE_SETREGID ? 1|undef include=unistd.h int main(){setregid(0, 0);}
+HAVE_SETRESGID ? 1|undef include=unistd.h int main(){setresgid(0, 0, 0);}
+HAVE_SETRESUID ? 1|undef define=_GNU_SOURCE include=unistd.h int main(){setresuid(0, 0, 0);}
+HAVE_SETREUID ? 1|undef include=unistd.h int main(){setreuid(0, 0);}
+HAVE_SETSID ? 1|undef include=unistd.h int main(){setsid();}
+HAVE_SETSOCKOPT ? 1|undef include=sys/socket.h int main(){setsockopt(0, 0, 0, 0, 0);}
+HAVE_SETUID ? 1|undef include=unistd.h int main(){setuid(0);}
+HAVE_SETVBUF ? 1|undef include=stdio.h int main(){setvbuf(0, 0, 0, 0);}
+HAVE_SHM_OPEN ? 1|undef include=sys/mman.h int main(){shm_open(0, 0, 0);}
+HAVE_SHM_UNLINK ? 1|undef include=sys/mman.h int main(){shm_unlink(0);}
+HAVE_SHUTDOWN ? 1|undef include=sys/socket.h int main(){shutdown(0, 0);}
+HAVE_SIGACTION ? 1|undef include=signal.h int main(){struct sigaction sa; sigaction(0, &sa, 0);}
+HAVE_SIGALTSTACK ? 1|undef include=signal.h int main(){sigaltstack(0, 0);}
+HAVE_SIGFILLSET ? 1|undef include=signal.h int main(){sigset_t set; sigfillset(&set);}
+HAVE_SIGINTERRUPT ? 1|undef include=signal.h int main(){siginterrupt(0, 0);}
+HAVE_SIGPENDING ? 1|undef include=signal.h int main(){sigset_t set; sigpending(&set);}
+HAVE_SIGRELSE ? 1|undef include=signal.h int main(){sigrelse(0);}
+HAVE_SIGTIMEDWAIT ? 1|undef include=signal.h int main(){sigset_t set; sigtimedwait(&set, 0, 0);}
+HAVE_SIGWAIT ? 1|undef include=signal.h int main(){sigset_t set; sigwait(&set, 0);}
+HAVE_SIGWAITINFO ? 1|undef include=signal.h int main(){sigset_t set; sigwaitinfo(&set, 0);}
+HAVE_SNPRINTF ? 1|undef include=stdio.h int main(){snprintf(0, 0, 0);}
+HAVE_SOCKET ? 1|undef include=sys/socket.h int main(){socket(0, 0, 0);}
+HAVE_SOCKETPAIR ? 1|undef include=sys/socket.h int main(){int sv[2]; socketpair(0, 0, 0, sv);}
+HAVE_SPLICE ? 1|undef define=_GNU_SOURCE include=fcntl.h int main(){splice(0, 0, 0, 0, 0, 0);}
+HAVE_STATVFS ? 1|undef include=sys/statvfs.h int main(){struct statvfs st; statvfs(0, &st);}
+HAVE_STRFTIME ? 1|undef include=time.h int main(){struct tm tm; strftime(0, 0, 0, &tm);}
+HAVE_STRSIGNAL ? 1|undef include=string.h int main(){strsignal(0);}
+HAVE_SYMLINK ? 1|undef include=unistd.h int main(){symlink(0, 0);}
+HAVE_SYMLINKAT ? 1|undef include=unistd.h int main(){symlinkat(0, 0, 0);}
+HAVE_SYNC ? 1|undef include=unistd.h int main(){sync();}
+HAVE_SYSCONF ? 1|undef include=unistd.h int main(){sysconf(0);}
+HAVE_SYSTEM ? 1|undef include=stdlib.h int main(){system(0);}
+HAVE_TCGETPGRP ? 1|undef include=unistd.h int main(){tcgetpgrp(0);}
+HAVE_TCSETPGRP ? 1|undef include=unistd.h int main(){tcsetpgrp(0, 0);}
+HAVE_TEMPNAM ? 1|undef include=stdio.h int main(){tempnam(0, 0);}
+HAVE_TIMEGM ? 1|undef include=time.h int main(){struct tm tm; timegm(&tm);}
+HAVE_TIMES ? 1|undef include=sys/times.h int main(){struct tms tms; times(&tms);}
+HAVE_TMPFILE ? 1|undef include=stdio.h int main(){tmpfile();}
+HAVE_TMPNAM ? 1|undef include=stdio.h int main(){tmpnam(0);}
+HAVE_TMPNAM_R ? 1|undef include=stdio.h int main(){tmpnam_r(0);}
+HAVE_TRUNCATE ? 1|undef include=unistd.h int main(){truncate(0, 0);}
+HAVE_UMASK ? 1|undef include=sys/stat.h int main(){umask(0);}
+HAVE_UNAME ? 1|undef include=sys/utsname.h int main(){struct utsname uts; uname(&uts);}
+HAVE_UNLINKAT ? 1|undef include=unistd.h int main(){unlinkat(0, 0, 0);}
+HAVE_UTIMENSAT ? 1|undef include=sys/stat.h int main(){utimensat(0, 0, 0, 0);}
+HAVE_UTIMES ? 1|undef include=sys/time.h int main(){utimes(0, 0);}
+HAVE_VFORK ? 1|undef include=unistd.h int main(){vfork();}
+HAVE_WAIT ? 1|undef include=sys/wait.h int main(){wait(0);}
+HAVE_WAIT3 ? 1|undef include=sys/wait.h int main(){wait3(0, 0, 0);}
+HAVE_WAIT4 ? 1|undef include=sys/wait.h int main(){wait4(0, 0, 0, 0);}
+HAVE_WAITID ? 1|undef include=sys/wait.h int main(){waitid(0, 0, 0, 0);}
+HAVE_WAITPID ? 1|undef include=sys/wait.h int main(){waitpid(0, 0, 0);}
+HAVE_WCSCOLL ? 1|undef include=wchar.h int main(){wcscoll(0, 0);}
+HAVE_WCSFTIME ? 1|undef include=wchar.h int main(){wcsftime(0, 0, 0, 0);}
+HAVE_WCSXFRM ? 1|undef include=wchar.h int main(){wcsxfrm(0, 0, 0);}
+HAVE_WMEMCMP ? 1|undef include=wchar.h int main(){wmemcmp(0, 0, 0);}
+HAVE_WRITEV ? 1|undef include=sys/uio.h int main(){writev(0, 0, 0);}
+HAVE_UUID_CREATE ? 1|undef include=uuid.h int main(){uuid_create(0,0);}
+
+# BSD/macOS specific functions
+HAVE_CHFLAGS ? 1|undef include=sys/stat.h int main(){chflags(0, 0);}
+HAVE_LCHFLAGS ? 1|undef include=sys/stat.h int main(){lchflags(0, 0);}
+HAVE_LCHMOD ? 1|undef include=sys/stat.h int main(){lchmod(0, 0);}
+HAVE_KQUEUE ? 1|undef include=sys/event.h int main(){kqueue();}
+HAVE_FDWALK ? 1|undef include=fcntl.h int main(){fdwalk(0, 0);}
+HAVE_FORK1 ? 1|undef include=sys/types.h,sys/proc.h int main(){fork1();}
+HAVE_GETPGRP ? 1|undef include=unistd.h int main(){getpgrp();}
+HAVE_PLOCK ? 1|undef include=sys/lock.h int main(){plock(0);}
+HAVE_RTPSPAWN ? 1|undef include=spawn.h int main(){rtpspawn(0, 0, 0, 0, 0, 0);}
+HAVE_STRLCPY ? 1|undef include=string.h int main(){strlcpy(0, 0, 0);}
+HAVE__GETPTY ? 1|undef include=stdlib.h int main(){_getpty(0, 0, 0, 0);}
+
+# Additional math functions
+HAVE_FSEEK64 ? 1|undef include=stdio.h int main(){fseek64(0, 0, 0);}
+HAVE_FTELL64 ? 1|undef include=stdio.h int main(){ftell64(0);}
+
+# Library functions
+HAVE_CRYPT_R ? 1|undef include=crypt.h int main(){struct crypt_data cd; crypt_r(0, 0, &cd);}
+HAVE_CTERMID_R ? 1|undef include=stdio.h int main(){ctermid_r((char*)0);}
+HAVE_EXPLICIT_MEMSET ? 1|undef include=string.h int main(){explicit_memset(0, 0, 0);}
+
+# UUID functions
+HAVE_UUID_ENC_BE ? 1|undef include=uuid.h int main(){uuid_enc_be(0, 0);}
+HAVE_UUID_GENERATE_TIME_SAFE ? 1|undef include=uuid.h int main(){uuid_generate_time_safe(0);}
+
+# Various other functions
+HAVE_DYLD_SHARED_CACHE_CONTAINS_PATH ? 1|undef include=mach-o/dyld.h int main(){_dyld_shared_cache_contains_path(0);}
+
+# Curses functions
+HAVE_CURSES_FILTER ? 1|undef include=curses.h int main(){filter();}
+HAVE_CURSES_HAS_KEY ? 1|undef include=curses.h int main(){has_key(0);}
+HAVE_CURSES_IMMEDOK ? 1|undef include=curses.h int main(){immedok(0, 0);}
+HAVE_CURSES_IS_PAD ? 1|undef include=curses.h int main(){is_pad(0);}
+HAVE_CURSES_IS_TERM_RESIZED ? 1|undef include=curses.h int main(){is_term_resized(0, 0);}
+HAVE_CURSES_RESIZETERM ? 1|undef include=curses.h int main(){resizeterm(0, 0);}
+HAVE_CURSES_RESIZE_TERM ? 1|undef include=curses.h int main(){resize_term(0, 0);}
+HAVE_CURSES_SYNCOK ? 1|undef include=curses.h int main(){syncok(0, 0);}
+HAVE_CURSES_TYPEAHEAD ? 1|undef include=curses.h int main(){typeahead(0);}
+HAVE_CURSES_USE_ENV ? 1|undef include=curses.h int main(){use_env(0);}
+HAVE_CURSES_WCHGAT ? 1|undef include=curses.h int main(){wchgat(0, 0, 0, 0, 0);}
+# Readline functions
+HAVE_RL_APPEND_HISTORY ? 1|undef include=readline/history.h int main(){append_history(0, 0);}
+HAVE_RL_CATCH_SIGNAL ? 1|undef include=readline/readline.h int main(){rl_catch_signals = 0;}
+HAVE_RL_COMPLETION_MATCHES ? 1|undef include=readline/readline.h int main(){rl_completion_matches(0, 0);}
+HAVE_RL_RESIZE_TERMINAL ? 1|undef include=readline/readline.h int main(){rl_resize_terminal();}
+
+# Pthread functions
+HAVE_PTHREAD_CONDATTR_SETCLOCK ? 1|undef include=pthread.h int main(){pthread_condattr_t attr; pthread_condattr_setclock(&attr, 0);}
+HAVE_PTHREAD_GETCPUCLOCKID ? 1|undef include=pthread.h int main(){clockid_t clk; pthread_getcpuclockid(0, &clk);}
+
+# Header includes and type checks
+HAVE_ADDRINFO ? 1|undef include=netdb.h int main(){struct addrinfo ai; return 0;}
+HAVE_ALIGNED_REQUIRED ? 1|undef include=stddef.h int main(){char a[1]; return ((size_t)a) & 1;}
+HAVE_ALTZONE ? 1|undef include=time.h int main(){return altzone;}
+
+# Broken function tests (these typically compile but have runtime issues)
+# HAVE_BROKEN_MBSTOWCS ?u1 $(include=stdlib.h,wchar.h int main(){return mbstowcs(NULL, "test", 0) == 0;})
+# HAVE_BROKEN_NICE ?u1 $(include=unistd.h int main(){nice(1); return 0;})
+# HAVE_BROKEN_PIPE_BUF ?u1 $(include=limits.h int main(){return PIPE_BUF;})
+# HAVE_BROKEN_POLL ?u1 $(include=poll.h int main(){struct pollfd pfd; poll(&pfd, 1, 0); return 0;})
+# HAVE_BROKEN_POSIX_SEMAPHORES ?u1 $(include=semaphore.h int main(){sem_t sem; return 0;})
+# HAVE_BROKEN_PTHREAD_SIGMASK ?u1 $(include=pthread.h,signal.h int main(){sigset_t set; pthread_sigmask(SIG_BLOCK, &set, NULL); return 0;})
+# HAVE_BROKEN_SEM_GETVALUE ?u1 $(include=semaphore.h int main(){sem_t sem; int val; sem_getvalue(&sem, &val); return 0;})
+# HAVE_BROKEN_UNSETENV ?u1 $(include=stdlib.h int main(){unsetenv("TEST"); return 0;})
+
+# Compiler builtin features
+HAVE_BUILTIN_ATOMIC ? 1|undef int main(){int x = 0; __atomic_store_n(&x, 1, __ATOMIC_SEQ_CST); return __atomic_load_n(&x, __ATOMIC_SEQ_CST);}
+HAVE_COMPUTED_GOTOS ? 1|undef int main(){void *ptr = &&label; goto *ptr; label: return 0;}
+
+# RTLD declarations
+HAVE_DECL_RTLD_DEEPBIND ? 1|undef include=dlfcn.h int main(){return RTLD_DEEPBIND;}
+HAVE_DECL_RTLD_GLOBAL ? 1|undef include=dlfcn.h int main(){return RTLD_GLOBAL;}
+HAVE_DECL_RTLD_LAZY ? 1|undef include=dlfcn.h int main(){return RTLD_LAZY;}
+HAVE_DECL_RTLD_LOCAL ? 1|undef include=dlfcn.h int main(){return RTLD_LOCAL;}
+HAVE_DECL_RTLD_MEMBER ? 1|undef include=dlfcn.h int main(){return RTLD_MEMBER;}
+HAVE_DECL_RTLD_NODELETE ? 1|undef include=dlfcn.h int main(){return RTLD_NODELETE;}
+HAVE_DECL_RTLD_NOLOAD ? 1|undef include=dlfcn.h int main(){return RTLD_NOLOAD;}
+HAVE_DECL_RTLD_NOW ? 1|undef include=dlfcn.h int main(){return RTLD_NOW;}
+HAVE_DECL_TZNAME ? 1|undef include=time.h int main(){return tzname[0] != NULL;}
+
+# Device and file system features
+HAVE_DEVICE_MACROS ? 1|undef include=sys/types.h,sys/stat.h int main(){dev_t d = 0; return major(d) | minor(d);}
+HAVE_DEV_PTC ? 1|undef include=fcntl.h int main(){return open("/dev/ptc", O_RDWR);}
+HAVE_DEV_PTMX ? 1|undef include=fcntl.h int main(){return open("/dev/ptmx", O_RDWR);}
+HAVE_DIRENT_D_TYPE ? 1|undef include=dirent.h int main(){struct dirent d; return d.d_type;}
+HAVE_DIRFD ? 1|undef include=dirent.h int main(){DIR *d = NULL; return dirfd(d);}
+
+# System features
+HAVE_DYNAMIC_LOADING ? 1|undef include=dlfcn.h int main(){dlopen("test", RTLD_NOW); return 0;}
+HAVE_EPOLL ? 1|undef include=sys/epoll.h int main(){return epoll_create(1);}
+
+# GCC assembly features
+HAVE_GCC_UINT128_T ? 1|undef int main(){__uint128_t x = 0; return (int)x;}
+
+# gethostbyname_r variants
+HAVE_GETHOSTBYNAME_R_3_ARG ? 1|undef include=netdb.h int main(){struct hostent_data hed; gethostbyname_r("localhost", NULL, &hed); return 0;}
+HAVE_GETHOSTBYNAME_R_5_ARG ? 1|undef include=netdb.h int main(){struct hostent he; char buf[1024]; gethostbyname_r("localhost", &he, buf, sizeof(buf), NULL); return 0;}
+HAVE_GETHOSTBYNAME_R_6_ARG ? 1|undef include=netdb.h int main(){struct hostent he; char buf[1024]; struct hostent *result; int h_errno; gethostbyname_r("localhost", &he, buf, sizeof(buf), &result, &h_errno); return 0;}
+
+# System calls and features
+HAVE_GETRANDOM_SYSCALL ? 1|undef include=sys/syscall.h,unistd.h int main(){return syscall(SYS_getrandom, NULL, 0, 0);}
+
+# Bug detection
+HAVE_GLIBC_MEMMOVE_BUG ? 1|undef include=string.h int main(){char buf[10]; memmove(buf+1, buf, 5); return 0;}
+HAVE_IPA_PURE_CONST_BUG ? 1|undef int main(){return 0;}
+
+# File and library support
+HAVE_LARGEFILE_SUPPORT ? 1|undef include=sys/types.h int main(){off_t offset = 0; return sizeof(offset) > 4;}
+HAVE_LIBB2 ? 1|undef include=blake2.h int main(){blake2b_state state; blake2s_final(&state, 0, 0); return 0;}
+HAVE_LIBDB ? 1|undef include=db.h int main(){DB *db; return 0;}
+HAVE_LIBDL ? 1|undef include=dlfcn.h int main(){dlopen("test", RTLD_NOW); return 0;}
+HAVE_LIBDLD ? 1|undef int main(){return 0;}
+HAVE_LIBIEEE ? 1|undef int main(){return 0;}
+HAVE_LIBRESOLV ? 1|undef include=resolv.h int main(){res_init(); return 0;}
+HAVE_LIBSENDFILE ? 1|undef include=sys/sendfile.h int main(){sendfile(0, 0, NULL, 0); return 0;}
+HAVE_LIBSQLITE3 ? 1|undef include=sqlite3.h int main(){sqlite3 *db; return 0;}
+
+# Linux-specific headers
+HAVE_LINUX_AUXVEC_H ? 1|undef include=linux/auxvec.h int main(){return AT_NULL;}
+HAVE_LINUX_CAN_BCM_H ? 1|undef include=linux/can/bcm.h int main(){struct bcm_msg_head msg; return 0;}
+HAVE_LINUX_CAN_H ? 1|undef include=linux/can.h int main(){struct can_frame frame; return 0;}
+HAVE_LINUX_CAN_J1939_H ? 1|undef include=linux/can/j1939.h int main(){return J1939_MAX_UNICAST_ADDR;}
+HAVE_LINUX_CAN_RAW_FD_FRAMES ? 1|undef include=linux/can/raw.h int main(){return CAN_RAW_FD_FRAMES;}
+HAVE_LINUX_CAN_RAW_H ? 1|undef include=linux/can/raw.h int main(){return CAN_RAW_FILTER;}
+HAVE_LINUX_CAN_RAW_JOIN_FILTERS ? 1|undef include=linux/can/raw.h int main(){return CAN_RAW_JOIN_FILTERS;}
+HAVE_LINUX_MEMFD_H ? 1|undef include=linux/memfd.h int main(){return MFD_CLOEXEC;}
+HAVE_LINUX_NETLINK_H ? 1|undef include=linux/netlink.h int main(){struct nlmsghdr nlh; return 0;}
+HAVE_LINUX_QRTR_H ? 1|undef include=linux/qrtr.h int main(){struct sockaddr_qrtr sq; return 0;}
+HAVE_LINUX_RANDOM_H ? 1|undef include=linux/random.h int main(){return GRND_NONBLOCK;}
+HAVE_LINUX_SOUNDCARD_H ? 1|undef include=linux/soundcard.h int main(){return SOUND_VERSION;}
+HAVE_LINUX_TIPC_H ? 1|undef include=linux/tipc.h int main(){struct sockaddr_tipc addr; return 0;}
+HAVE_LINUX_VM_SOCKETS_H ? 1|undef include=linux/vm_sockets.h int main(){return VMADDR_CID_ANY;}
+HAVE_LINUX_WAIT_H ? 1|undef include=linux/wait.h int main(){return 0;}
+
+# Type support
+HAVE_LONG_DOUBLE ? 1|undef int main(){long double x = 0.0L; return (int)x;}
+# HAVE_NON_UNICODE_WCHAR_T_REPRESENTATION ?u1 $(include=wchar.h int main(){wchar_t w = L'\x80'; return (int)w;})
+HAVE_PROTOTYPES ? 1|undef int test(int x); int main(){return test(0);} int test(int x){return x;}
+
+# pthread features
+HAVE_PTHREAD_DESTRUCTOR ? 1|undef include=pthread.h void destructor(void *); int main(){pthread_key_create(NULL, destructor); return 0;} void destructor(void *p){}
+HAVE_PTHREAD_INIT ? 1|undef include=pthread.h int main(){pthread_init(); return 0;}
+
+# Readline features
+HAVE_RL_COMPLETION_APPEND_CHARACTER ? 1|undef include=readline/readline.h int main(){rl_completion_append_character = ' '; return 0;}
+HAVE_RL_COMPLETION_DISPLAY_MATCHES_HOOK ? 1|undef include=readline/readline.h int main(){rl_completion_display_matches_hook = NULL; return 0;}
+HAVE_RL_COMPLETION_SUPPRESS_APPEND ? 1|undef include=readline/readline.h int main(){rl_completion_suppress_append = 1; return 0;}
+HAVE_RL_PRE_INPUT_HOOK ? 1|undef include=readline/readline.h int main(){rl_pre_input_hook = NULL; return 0;}
+
+# Signal and socket features
+HAVE_SIGINFO_T_SI_BAND ? 1|undef include=signal.h int main(){siginfo_t si; return si.si_band;}
+HAVE_SOCKADDR_ALG ? 1|undef include=linux/if_alg.h int main(){struct sockaddr_alg sa; return 0;}
+HAVE_SOCKADDR_SA_LEN ? 1|undef include=sys/socket.h int main(){struct sockaddr sa; return sa.sa_len;}
+HAVE_SOCKADDR_STORAGE ? 1|undef include=sys/socket.h int main(){struct sockaddr_storage ss; return 0;}
+
+# Type definitions
+HAVE_SSIZE_T ? 1|undef include=sys/types.h int main(){ssize_t s = 0; return (int)s;}
+HAVE_STAT_TV_NSEC ? 1|undef include=sys/stat.h int main(){struct stat st; return st.st_mtim.tv_nsec;}
+HAVE_STAT_TV_NSEC2 ? 1|undef include=sys/stat.h int main(){struct stat st; return st.st_mtimensec;}
+HAVE_STD_ATOMIC ? 1|undef include=stdatomic.h int main(){atomic_int x; atomic_uintptr_t y; return 0;}
+
+# Struct member checks
+HAVE_STRUCT_PASSWD_PW_GECOS ? 1|undef include=pwd.h int main(){struct passwd pw; return pw.pw_gecos != NULL;}
+HAVE_STRUCT_PASSWD_PW_PASSWD ? 1|undef include=pwd.h int main(){struct passwd pw; return pw.pw_passwd != NULL;}
+HAVE_STRUCT_STAT_ST_BIRTHTIME ? 1|undef include=sys/stat.h int main(){struct stat st; return st.st_birthtime;}
+HAVE_STRUCT_STAT_ST_BLKSIZE ? 1|undef include=sys/stat.h int main(){struct stat st; return st.st_blksize;}
+HAVE_STRUCT_STAT_ST_BLOCKS ? 1|undef include=sys/stat.h int main(){struct stat st; return st.st_blocks;}
+HAVE_STRUCT_STAT_ST_FLAGS ? 1|undef include=sys/stat.h int main(){struct stat st; return st.st_flags;}
+HAVE_STRUCT_STAT_ST_GEN ? 1|undef include=sys/stat.h int main(){struct stat st; return st.st_gen;}
+HAVE_STRUCT_STAT_ST_RDEV ? 1|undef include=sys/stat.h int main(){struct stat st; return st.st_rdev;}
+HAVE_STRUCT_TM_TM_ZONE ? 1|undef include=time.h int main(){struct tm t; return t.tm_zone != NULL;}
+
+# Time and timezone features
+HAVE_TM_ZONE ? 1|undef include=time.h int main(){struct tm t; return t.tm_zone != NULL;}
+HAVE_TZNAME ? 1|undef include=time.h int main(){return tzname[0] != NULL;}
+# HAVE_USABLE_WCHAR_T ?u1 $(include=wchar.h int main(){wchar_t w = L'A'; return sizeof(w) >= 2;})
+HAVE_WORKING_TZSET ? 1|undef include=time.h int main(){tzset(); return 0;}
+HAVE_ZLIB_COPY ? 1|undef include=zlib.h int main(){z_stream strm; inflateCopy(&strm, &strm); return 0;}

@@ -1,0 +1,6 @@
+HAVE_MEMORY_H ? 1|undef include=memory.h
+HAVE_TTYNAME ? 1|undef include=unistd.h int main(){ttyname(0);}
+HAVE_LIBGDBM_COMPAT ? 1|undef include=gdbm.h int main(){GDBM_FILE gf; return 0;}
+HAVE_LIBNDBM ? 1|undef include=ndbm.h int main(){DBM *db; return 0;}
+HAVE_LIBREADLINE ? 1|undef include=readline/readline.h int main(){readline("prompt"); return 0;}
+HAVE_STDARG_PROTOTYPES ? 1|undef include=stdarg.h void test(int x, ...){va_list ap; va_start(ap, x); va_end(ap);} int main(){test(1, 2); return 0;}

@@ -1,0 +1,17 @@
+# Headers
+HAVE_EDITLINE_READLINE_H ? 1|undef include=editline/readline.h
+HAVE_LINUX_FS_H ? 1|undef include=linux/fs.h
+HAVE_MINIX_CONFIG_H ? 1|undef include=minix/config.h
+HAVE_NET_ETHERNET_H ? 1|undef include=net/ethernet.h
+HAVE_PANEL_H ? 1|undef include=panel.h
+HAVE_READLINE_READLINE_H ? 1|undef include=readline/readline.h
+HAVE_STDIO_H ? 1|undef include=stdio.h
+HAVE_SYS_PIDFD_H ? 1|undef include=sys/pidfd.h
+
+# Functions
+HAVE_FFI_CLOSURE_ALLOC ? 1|undef include=ffi.h int main(){ffi_closure_alloc(0, 0);}
+HAVE_FFI_PREP_CIF_VAR ? 1|undef include=ffi.h int main(){ffi_prep_cif_var(0, 0, 0, 0, 0, 0);}
+HAVE_FFI_PREP_CLOSURE_LOC ? 1|undef include=ffi.h int main(){ffi_prep_closure_loc(0, 0, 0, 0, 0);}
+HAVE_SETNS ? 1|undef define=_GNU_SOURCE include=sched.h int main(){setns(0, 0);}
+HAVE_TTYNAME_R ? 1|undef include=unistd.h int main(){char buf[256]; ttyname_r(0, buf, sizeof(buf));}
+HAVE_UNSHARE ? 1|undef define=_GNU_SOURCE include=unistd.h int main(){unshare(0);}
