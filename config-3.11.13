@@ -1,6 +1,14 @@
-HAVE_MEMORY_H ? 1|undef include=memory.h
-HAVE_TTYNAME ? 1|undef include=unistd.h int main(){ttyname(0);}
-HAVE_LIBGDBM_COMPAT ? 1|undef include=gdbm.h int main(){GDBM_FILE gf; return 0;}
-HAVE_LIBNDBM ? 1|undef include=ndbm.h int main(){DBM *db; return 0;}
-HAVE_LIBREADLINE ? 1|undef include=readline/readline.h int main(){readline("prompt"); return 0;}
-HAVE_STDARG_PROTOTYPES ? 1|undef include=stdarg.h void test(int x, ...){va_list ap; va_start(ap, x); va_end(ap);} int main(){test(1, 2); return 0;}
+HAVE_MEMORY_H ? 1|undef have-header memory.h
+HAVE_TTYNAME ? 1|undef have-function ttyname include=unistd.h
+HAVE_LIBGDBM_COMPAT ? 1|undef have-type GDBM_FILE include=gdbm.h
+HAVE_LIBNDBM ? 1|undef links lib=ndbm
+    char dbm_open(); int main(void) { return dbm_open(); }
+HAVE_LIBREADLINE ? 1|undef have-function readline include=readline/readline.h
+HAVE_STDARG_PROTOTYPES ? 1|undef links include=stdarg.h
+    void test(int x, ...){va_list ap; va_start(ap, x); va_end(ap);} int main(){test(1, 2); return 0;}
+
+# Set directly rather than checked
+PY_BUILTIN_HASHLIB_HASHES "md5,sha1,sha256,sha512,sha3,blake2"
+PY_FORMAT_SIZE_T "z"
+TIME_WITH_SYS_TIME 1
+FLOAT_WORDS_BIGENDIAN ? 1|undef when target.cpu.endian == .big

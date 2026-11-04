@@ -50,13 +50,6 @@ pub fn build(b: *std.Build) !void {
             .target = b.graph.host,
         }),
     });
-    const configquery_exe = b.addExecutable(.{
-        .name = "configquery",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("configquery.zig"),
-            .target = b.graph.host,
-        }),
-    });
     const makesetup_exe = b.addExecutable(.{
         .name = "makesetup",
         .root_module = b.createModule(.{
@@ -65,12 +58,15 @@ pub fn build(b: *std.Build) !void {
         }),
     });
 
+    const conzig_exe = b.dependency("conzig", .{ .target = b.graph.host }).artifact("conzig");
+
     const upstream: *std.Build.Dependency = switch (version) {
         .@"3.11.13" => if (b.lazyDependency("upstream_3.11.13", .{})) |d| d else noUpstream(b),
         .@"3.12.11" => if (b.lazyDependency("upstream_3.12.11", .{})) |d| d else noUpstream(b),
     };
 
-    const target = b.standardTargetOptions(.{});
+    const target = explicitTarget(b, b.standardTargetOptions(.{}));
+    const host = explicitTarget(b, b.graph.host);
     const optimize = b.standardOptimizeOption(.{});
 
     const ssl_enabled = b.option(bool, "ssl", "enable ssl") orelse switch (target.result.os.tag) {
@@ -91,7 +87,7 @@ pub fn build(b: *std.Build) !void {
     };
 
     const makesetup_host = addMakesetup(b, version, upstream, libs_host, .{
-        .os_tag = b.graph.host.result.os.tag,
+        .os_tag = host.result.os.tag,
         .replace_exe = replace_exe,
         .makesetup_exe = makesetup_exe,
     });
@@ -100,9 +96,26 @@ pub fn build(b: *std.Build) !void {
         .replace_exe = replace_exe,
         .makesetup_exe = makesetup_exe,
     });
-    const pyconfig_host = try addPyconfig(b, version, upstream, b.graph.host, .{ .zlib = null, .openssl = null }, configquery_exe);
+    const pyconfig_host = addPyconfig(b, conzig_exe, version, upstream, host, .{ .zlib = null, .openssl = null });
 
-    const freeze_module_exe = addPythonExe(b, upstream, b.graph.host, .Debug, .{
+    {
+        const checkconfig_exe = b.addExecutable(.{
+            .name = "checkconfig",
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("checkconfig.zig"),
+                .target = b.graph.host,
+            }),
+        });
+        const check_config = b.addRunArtifact(checkconfig_exe);
+        check_config.has_side_effects = true;
+        check_config.stdio = .inherit;
+        check_config.addDirectoryArg(upstream.path("."));
+        _ = check_config.addOutputDirectoryArg("configure");
+        check_config.addFileArg(pyconfig_host.header);
+        b.step("check-config", "Show where conzig's config differs from running configure on this machine").dependOn(&check_config.step);
+    }
+
+    const freeze_module_exe = addPythonExe(b, upstream, host, .Debug, .{
         .name = "freeze_module",
         .makesetup_out = makesetup_host,
         .pyconfig = pyconfig_host,
@@ -137,7 +150,7 @@ pub fn build(b: *std.Build) !void {
     };
 
     const frozen_headers, const deepfreeze_c = blk_deepfreeze_c: {
-        const bootstrap_python_exe = addPythonExe(b, upstream, b.graph.host, .Debug, .{
+        const bootstrap_python_exe = addPythonExe(b, upstream, host, .Debug, .{
             .name = "bootstrap_python",
             .makesetup_out = makesetup_host,
             .pyconfig = pyconfig_host,
@@ -209,7 +222,7 @@ pub fn build(b: *std.Build) !void {
     const final_exe = addPythonExe(b, upstream, target, optimize, .{
         .name = "python",
         .makesetup_out = makesetup_target,
-        .pyconfig = try addPyconfig(b, version, upstream, target, libs_target, configquery_exe),
+        .pyconfig = addPyconfig(b, conzig_exe, version, upstream, target, libs_target),
         .stage = .{
             .final = .{
                 .stage2 = stage2_frozen_mods,
@@ -231,7 +244,7 @@ pub fn build(b: *std.Build) !void {
     try ci(b, version, ssl_enabled, upstream, ci_step, .{
         .replace_exe = replace_exe,
         .makesetup_exe = makesetup_exe,
-        .configquery_exe = configquery_exe,
+        .conzig_exe = conzig_exe,
         .stage2_frozen_mods = stage2_frozen_mods,
         .frozen_headers = frozen_headers,
         .deepfreeze_c = deepfreeze_c,
@@ -467,10 +480,7 @@ fn addPythonExe(
         .windows => "\"win32\"",
         else => std.debug.panic("todo: populate PLATFORM for os '{s}'", .{@tagName(target.result.os.tag)}),
     });
-    switch (args.pyconfig.header) {
-        .path => |path| exe.root_module.addIncludePath(path.dirname()),
-        .config_header => |h| exe.root_module.addConfigHeader(h),
-    }
+    exe.root_module.addIncludePath(args.pyconfig.header.dirname());
     exe.root_module.addIncludePath(upstream.path("."));
     exe.root_module.addIncludePath(upstream.path("Include"));
     exe.root_module.addIncludePath(upstream.path("Include/internal"));
@@ -661,10 +671,7 @@ fn addPythonExe(
 const Pyconfig = struct {
     version: Version,
     libs: Libs,
-    header: union(enum) {
-        path: std.Build.LazyPath,
-        config_header: *std.Build.Step.ConfigHeader,
-    },
+    header: std.Build.LazyPath,
 };
 
 const Libs = struct {
@@ -674,235 +681,76 @@ const Libs = struct {
 
 fn addPyconfig(
     b: *std.Build,
+    conzig_exe: *std.Build.Step.Compile,
     version: Version,
     upstream: *std.Build.Dependency,
     target: std.Build.ResolvedTarget,
     libs: Libs,
-    configquery_exe: *std.Build.Step.Compile,
-) !Pyconfig {
-    const t = target.result;
-    if (t.os.tag == .windows) return .{
+) Pyconfig {
+    if (target.result.os.tag == .windows) return .{
         .version = version,
         .libs = libs,
-        .header = .{ .path = upstream.path("PC/pyconfig.h") },
+        .header = upstream.path("PC/pyconfig.h"),
     };
 
-    const config_header = b.addConfigHeader(.{
-        .style = .{ .autoconf_undef = upstream.path("pyconfig.h.in") },
-        .include_path = "pyconfig.h",
-    }, .{
-        .ALIGNOF_LONG = 8,
-        .ALIGNOF_SIZE_T = 8,
-        .DOUBLE_IS_LITTLE_ENDIAN_IEEE754 = 1,
-        .ENABLE_IPV6 = 1,
-        .MAJOR_IN_SYSMACROS = have(t.os.tag == .linux),
-        .PTHREAD_KEY_T_IS_COMPATIBLE_WITH_INT = 1,
-        .PTHREAD_SYSTEM_SCHED_SUPPORTED = 1,
-        .PY_BUILTIN_HASHLIB_HASHES = "md5,sha1,sha256,sha512,sha3,blake2",
-        .PY_COERCE_C_LOCALE = 1,
-        .PY_SSL_DEFAULT_CIPHERS = 1,
-        .PY_SUPPORT_TIER = 2,
-        .RETSIGTYPE = .void,
-        .SIZEOF_DOUBLE = 8,
-        .SIZEOF_FLOAT = 4,
-        .SIZEOF_FPOS_T = 16,
-        .SIZEOF_INT = 4,
-        .SIZEOF_LONG = 8,
-        .SIZEOF_LONG_DOUBLE = 16,
-        .SIZEOF_LONG_LONG = 8,
-        .SIZEOF_OFF_T = 8,
-        .SIZEOF_PID_T = 4,
-        .SIZEOF_PTHREAD_KEY_T = 4,
-        .SIZEOF_PTHREAD_T = 8,
-        .SIZEOF_SHORT = 2,
-        .SIZEOF_SIZE_T = 8,
-        .SIZEOF_TIME_T = 8,
-        .SIZEOF_UINTPTR_T = 8,
-        .SIZEOF_VOID_P = 8,
-        .SIZEOF_WCHAR_T = 4,
-        .SIZEOF__BOOL = 1,
-        .STDC_HEADERS = 1,
-        .SYS_SELECT_WITH_SYS_TIME = 1,
-        .WITH_DECIMAL_CONTEXTVAR = 1,
-        .WITH_DOC_STRINGS = 1,
-        .WITH_FREELISTS = 1,
-        .WITH_PYMALLOC = 1,
-        ._DARWIN_C_SOURCE = 1,
-        ._FILE_OFFSET_BITS = 64,
-        ._LARGEFILE_SOURCE = 1,
-        ._NETBSD_SOURCE = 1,
-        ._POSIX_C_SOURCE = .@"200809L",
-        ._PYTHONFRAMEWORK = "",
-        ._REENTRANT = 1,
-        ._XOPEN_SOURCE = 700,
-        ._XOPEN_SOURCE_EXTENDED = 1,
-        .__BSD_VISIBLE = 1,
-        ._ALL_SOURCE = 1,
-        ._GNU_SOURCE = 1,
-        ._POSIX_PTHREAD_SEMANTICS = 1,
-        ._TANDEM_SOURCE = 1,
-        .__EXTENSIONS__ = 1,
-
-        .AC_APPLE_UNIVERSAL_BUILD = null,
-        .AIX_BUILDDATE = null,
-        .AIX_GENUINE_CPLUSPLUS = null,
-        .ALT_SOABI = null,
-        .ANDROID_API_LEVEL = null,
-        .DOUBLE_IS_ARM_MIXED_ENDIAN_IEEE754 = null,
-        .DOUBLE_IS_BIG_ENDIAN_IEEE754 = null,
-        .GETPGRP_HAVE_ARG = null,
-        .MAJOR_IN_MKDEV = null,
-        .MVWDELCH_IS_EXPRESSION = null,
-        .PACKAGE_BUGREPORT = null,
-        .PACKAGE_NAME = null,
-        .PACKAGE_STRING = null,
-        .PACKAGE_TARNAME = null,
-        .PACKAGE_URL = null,
-        .PACKAGE_VERSION = null,
-        .POSIX_SEMAPHORES_NOT_ENABLED = null,
-        .PYLONG_BITS_IN_DIGIT = null,
-        .PY_SQLITE_ENABLE_LOAD_EXTENSION = null,
-        .PY_SQLITE_HAVE_SERIALIZE = null,
-        .PY_SSL_DEFAULT_CIPHER_STRING = null,
-        .Py_DEBUG = null,
-        .Py_ENABLE_SHARED = null,
-        .Py_HASH_ALGORITHM = null,
-        .Py_STATS = null,
-        .Py_SUNOS_VERSION = null,
-        .Py_TRACE_REFS = null,
-        .SETPGRP_HAVE_ARG = null,
-        .SIGNED_RIGHT_SHIFT_ZERO_FILLS = null,
-        .THREAD_STACK_SIZE = null,
-        .TIMEMODULE_LIB = null,
-        .TM_IN_SYS_TIME = null,
-        .USE_COMPUTED_GOTOS = null,
-        .WINDOW_HAS_FLAGS = null,
-        .WITH_DTRACE = null,
-        .WITH_DYLD = null,
-        .WITH_EDITLINE = null,
-        .WITH_LIBINTL = null,
-        .WITH_NEXT_FRAMEWORK = null,
-        .WITH_VALGRIND = null,
-        .X87_DOUBLE_ROUNDING = null,
-        ._BSD_SOURCE = null,
-        ._INCLUDE__STDC_A1_SOURCE = null,
-        ._LARGE_FILES = null,
-        ._MINIX = null,
-        ._POSIX_1_SOURCE = null,
-        ._POSIX_SOURCE = null,
-        ._POSIX_THREADS = null,
-        ._WASI_EMULATED_GETPID = null,
-        ._WASI_EMULATED_PROCESS_CLOCKS = null,
-        ._WASI_EMULATED_SIGNAL = null,
-        .clock_t = null,
-        .@"const" = null,
-        .gid_t = null,
-        .mode_t = null,
-        .off_t = null,
-        .pid_t = null,
-        .signed = null,
-        .size_t = null,
-        .socklen_t = null,
-        .uid_t = null,
-        .WORDS_BIGENDIAN = null,
-
-        .HAVE_BROKEN_MBSTOWCS = null,
-        .HAVE_BROKEN_NICE = null,
-        .HAVE_BROKEN_PIPE_BUF = null,
-        .HAVE_BROKEN_POLL = null,
-        .HAVE_BROKEN_POSIX_SEMAPHORES = null,
-        .HAVE_BROKEN_PTHREAD_SIGMASK = null,
-        .HAVE_BROKEN_SEM_GETVALUE = null,
-        .HAVE_BROKEN_UNSETENV = null,
-
-        .HAVE_PTHREAD_STUBS = null,
-        .HAVE_USABLE_WCHAR_T = null,
-        .HAVE_NON_UNICODE_WCHAR_T_REPRESENTATION = null,
-        .HAVE_CHROOT = have(t.os.tag == .linux),
-        .HAVE_GCC_ASM_FOR_MC68881 = have(t.cpu.arch == .m68k),
-        .HAVE_GCC_ASM_FOR_X64 = have(t.cpu.arch == .x86_64),
-        .HAVE_GCC_ASM_FOR_X87 = have(t.cpu.arch == .x86_64 or t.cpu.arch == .x86),
-        // Readline type (static configuration, not function test)
-        .HAVE_RL_COMPDISP_FUNC_T = null,
+    const resolve = b.addRunArtifact(conzig_exe);
+    resolve.addArg("resolve");
+    resolve.addFileArg(b.path("config-common"));
+    resolve.addArg("--also");
+    resolve.addFileArg(b.path(b.fmt("config-{t}", .{version})));
+    resolve.addArgs(&.{
+        "--target",
+        target.query.zigTriple(b.allocator) catch @panic("OOM"),
+        "--zig",
+        b.graph.zig_exe,
+        b.fmt("libs.zlib={}", .{libs.zlib != null}),
+        "--error-unused-inputs",
+        "--resolved",
     });
-    switch (version) {
-        .@"3.11.13" => config_header.addValues(.{
-            .PY_FORMAT_SIZE_T = "z",
-            .TIME_WITH_SYS_TIME = 1,
-            .FLOAT_WORDS_BIGENDIAN = null,
-        }),
-        .@"3.12.11" => config_header.addValues(.{
-            .ALIGNOF_MAX_ALIGN_T = @as(u32, switch (t.cpu.arch) {
-                .x86_64, .aarch64 => 16,
-                .x86, .arm => 8,
-                else => 8,
-            }),
+    const resolved = resolve.addOutputFileArg("pyconfig.conf");
 
-            // ncurses library (static configuration, not function test)
-            .HAVE_NCURSESW = null,
-
-            // Performance trampoline feature
-            .PY_HAVE_PERF_TRAMPOLINE = null,
-
-            ._HPUX_ALT_XOPEN_SOCKET_API = null,
-            ._OPENBSD_SOURCE = null,
-
-            // C standard feature test macros (all set to null as they're optional)
-            .__STDC_WANT_IEC_60559_ATTRIBS_EXT__ = null,
-            .__STDC_WANT_IEC_60559_BFP_EXT__ = null,
-            .__STDC_WANT_IEC_60559_DFP_EXT__ = null,
-            .__STDC_WANT_IEC_60559_FUNCS_EXT__ = null,
-            .__STDC_WANT_IEC_60559_TYPES_EXT__ = null,
-            .__STDC_WANT_LIB_EXT2__ = null,
-            .__STDC_WANT_MATH_SPEC_FUNCS__ = null,
-        }),
-    }
-
-    {
-        const run = b.addRunArtifact(configquery_exe);
-        run.addArg("--zig-exe");
-        run.addArg(b.graph.zig_exe);
-        if (b.cache_root.path) |cache_root| {
-            run.addArg("--cache-dir");
-            run.addArg(cache_root);
-        }
-        run.addArg("-target");
-        run.addArg(try target.query.zigTriple(b.allocator));
-        run.addArg("-mcpu");
-        run.addArg(try target.query.serializeCpuAlloc(b.allocator));
-        if (libs.zlib) |zlib| run.addPrefixedDirectoryArg("-I", zlib.getEmittedIncludeTree());
-        if (libs.openssl) |openssl| run.addPrefixedDirectoryArg("-I", openssl.getEmittedIncludeTree());
-        run.addFileArg(b.path("config-common"));
-        run.addFileArg(switch (version) {
-            .@"3.11.13" => b.path("config-3.11.13"),
-            .@"3.12.11" => b.path("config-3.12.11"),
-        });
-        run.addArg("-o");
-        ConfigHeaderExt.addFile(config_header, run.addOutputFileArg("config"));
-    }
-
+    const header = b.addRunArtifact(conzig_exe);
+    header.addArg("header");
+    header.addFileArg(resolved);
+    header.addFileArg(upstream.path("pyconfig.h.in"));
     return .{
         .version = version,
         .libs = libs,
-        .header = .{ .config_header = config_header },
+        .header = header.addOutputFileArg("pyconfig.h"),
     };
 }
 
-fn have(x: bool) ?u1 {
-    return if (x) 1 else null;
-}
-
-const Config = struct { name: []const u8, string: []const u8 };
-fn concatConfigs(comptime first: anytype, comptime second: anytype) [std.meta.fields(@TypeOf(first)).len + std.meta.fields(@TypeOf(second)).len]Config {
-    const first_len = std.meta.fields(@TypeOf(first)).len;
-    var result: [first_len + std.meta.fields(@TypeOf(second)).len]Config = undefined;
-    inline for (std.meta.fields(@TypeOf(first)), result[0..first_len]) |field, *config| {
-        config.* = .{ .name = @tagName(@field(first, field.name)[0]), .string = @field(first, field.name)[1] };
+/// Spells out a native target so Zig uses its own libc rather than the headers and libraries on this
+/// machine, which the definitions don't describe. What was native about it stays the same.
+fn explicitTarget(b: *std.Build, target: std.Build.ResolvedTarget) std.Build.ResolvedTarget {
+    if (!target.query.isNative()) return target;
+    const t = target.result;
+    if (t.os.tag == .windows) return target;
+    // zig 0.16 can't pass this to the libraries it builds for an exe, so it has to be the default
+    const standard = t.standardDynamicLinkerPath();
+    if (!t.dynamic_linker.eql(standard)) std.debug.panic(
+        "this machine's dynamic linker '{s}' isn't the standard '{s}'",
+        .{ t.dynamic_linker.get() orelse "", standard.get() orelse "" },
+    );
+    var query: std.Target.Query = .{
+        .cpu_arch = t.cpu.arch,
+        .cpu_model = .native,
+        .os_tag = t.os.tag,
+        .abi = t.abi,
+    };
+    switch (t.os.versionRange()) {
+        .linux => |linux| {
+            query.os_version_min = .{ .semver = linux.range.min };
+            query.os_version_max = .{ .semver = linux.range.max };
+            if (t.isGnuLibC()) query.glibc_version = linux.glibc;
+        },
+        .semver => |range| {
+            query.os_version_min = .{ .semver = range.min };
+            query.os_version_max = .{ .semver = range.max };
+        },
+        else => {},
     }
-    inline for (std.meta.fields(@TypeOf(second)), result[first_len..]) |field, *config| {
-        config.* = .{ .name = @tagName(@field(second, field.name)[0]), .string = @field(second, field.name)[1] };
-    }
-    return result;
+    return b.resolveTargetQuery(query);
 }
 
 const python_src = struct {
@@ -1136,7 +984,7 @@ fn ci(
     args: struct {
         replace_exe: *std.Build.Step.Compile,
         makesetup_exe: *std.Build.Step.Compile,
-        configquery_exe: *std.Build.Step.Compile,
+        conzig_exe: *std.Build.Step.Compile,
         stage2_frozen_mods: Stage2FrozenMods,
         frozen_headers: []const std.Build.LazyPath,
         deepfreeze_c: std.Build.LazyPath,
@@ -1190,7 +1038,7 @@ fn ci(
         const exe = addPythonExe(b, upstream, target, optimize, .{
             .name = "python",
             .makesetup_out = makesetup,
-            .pyconfig = try addPyconfig(b, version, upstream, target, libs, args.configquery_exe),
+            .pyconfig = addPyconfig(b, args.conzig_exe, version, upstream, target, libs),
             .stage = .{ .final = .{
                 .stage2 = args.stage2_frozen_mods,
                 .frozen_headers = args.frozen_headers,
@@ -1222,4 +1070,3 @@ fn concat(allocator: std.mem.Allocator, lists: []const []const []const u8) []con
 }
 
 const std = @import("std");
-const ConfigHeaderExt = @import("ConfigHeaderExt.zig");

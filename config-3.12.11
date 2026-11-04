@@ -1,17 +1,33 @@
 # Headers
-HAVE_EDITLINE_READLINE_H ? 1|undef include=editline/readline.h
-HAVE_LINUX_FS_H ? 1|undef include=linux/fs.h
-HAVE_MINIX_CONFIG_H ? 1|undef include=minix/config.h
-HAVE_NET_ETHERNET_H ? 1|undef include=net/ethernet.h
-HAVE_PANEL_H ? 1|undef include=panel.h
-HAVE_READLINE_READLINE_H ? 1|undef include=readline/readline.h
-HAVE_STDIO_H ? 1|undef include=stdio.h
-HAVE_SYS_PIDFD_H ? 1|undef include=sys/pidfd.h
+HAVE_EDITLINE_READLINE_H ? 1|undef have-header editline/readline.h
+HAVE_LINUX_FS_H ? 1|undef have-header linux/fs.h
+HAVE_MINIX_CONFIG_H ? 1|undef have-header minix/config.h
+HAVE_NET_ETHERNET_H ? 1|undef have-header net/ethernet.h
+HAVE_PANEL_H ? 1|undef have-header panel.h
+HAVE_READLINE_READLINE_H ? 1|undef have-header readline/readline.h
+HAVE_STDIO_H ? 1|undef have-header stdio.h
+HAVE_SYS_PIDFD_H ? 1|undef have-header sys/pidfd.h
 
 # Functions
-HAVE_FFI_CLOSURE_ALLOC ? 1|undef include=ffi.h int main(){ffi_closure_alloc(0, 0);}
-HAVE_FFI_PREP_CIF_VAR ? 1|undef include=ffi.h int main(){ffi_prep_cif_var(0, 0, 0, 0, 0, 0);}
-HAVE_FFI_PREP_CLOSURE_LOC ? 1|undef include=ffi.h int main(){ffi_prep_closure_loc(0, 0, 0, 0, 0);}
-HAVE_SETNS ? 1|undef define=_GNU_SOURCE include=sched.h int main(){setns(0, 0);}
-HAVE_TTYNAME_R ? 1|undef include=unistd.h int main(){char buf[256]; ttyname_r(0, buf, sizeof(buf));}
-HAVE_UNSHARE ? 1|undef define=_GNU_SOURCE include=unistd.h int main(){unshare(0);}
+HAVE_FFI_CLOSURE_ALLOC ? 1|undef have-function ffi_closure_alloc include=ffi.h
+HAVE_FFI_PREP_CIF_VAR ? 1|undef have-function ffi_prep_cif_var include=ffi.h
+HAVE_FFI_PREP_CLOSURE_LOC ? 1|undef have-function ffi_prep_closure_loc include=ffi.h
+HAVE_SETNS ? 1|undef have-function setns define=_GNU_SOURCE include=sched.h
+HAVE_TTYNAME_R ? 1|undef have-function ttyname_r include=unistd.h
+HAVE_UNSHARE ? 1|undef have-function unshare include=sched.h
+
+# Set directly rather than checked
+PY_BUILTIN_HASHLIB_HASHES "md5,sha1,sha2,sha3,blake2"
+ALIGNOF_MAX_ALIGN_T alignof max_align_t include=stddef.h
+HAVE_NCURSESW undef
+_HPUX_ALT_XOPEN_SOCKET_API 1
+_OPENBSD_SOURCE 1
+__STDC_WANT_IEC_60559_ATTRIBS_EXT__ 1
+__STDC_WANT_IEC_60559_BFP_EXT__ 1
+__STDC_WANT_IEC_60559_DFP_EXT__ 1
+__STDC_WANT_IEC_60559_FUNCS_EXT__ 1
+__STDC_WANT_IEC_60559_TYPES_EXT__ 1
+__STDC_WANT_LIB_EXT2__ 1
+__STDC_WANT_MATH_SPEC_FUNCS__ 1
+# this also needs Python/asm_trampoline.S, which isn't compiled
+PY_HAVE_PERF_TRAMPOLINE undef

@@ -23,14 +23,19 @@
             .hash = "openssl-3.3.2-TC9C3Ze3ZABaKR5hc8KRnRPhTClKrKQKqTnXTUYkvmSR",
             .lazy = true,
         },
+        .conzig = .{
+            .path = "conzig",
+        },
     },
     .paths = .{
         "build.zig",
         "build.zig.zon",
-        "configquery.zig",
+        "checkconfig.zig",
+        "config-3.11.13",
+        "config-3.12.11",
+        "config-common",
+        "conzig",
         "makesetup.zig",
         "replace.zig",
-        "ConfigHeaderExt.zig",
-        "config-*",
     },
 }
