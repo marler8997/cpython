@@ -50,13 +50,6 @@ pub fn build(b: *std.Build) !void {
             .target = b.graph.host,
         }),
     });
-    const configquery_exe = b.addExecutable(.{
-        .name = "configquery",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("configquery.zig"),
-            .target = b.graph.host,
-        }),
-    });
     const makesetup_exe = b.addExecutable(.{
         .name = "makesetup",
         .root_module = b.createModule(.{
@@ -64,6 +57,36 @@ pub fn build(b: *std.Build) !void {
             .target = b.graph.host,
         }),
     });
+
+    {
+        const updateconfig_exe = b.addExecutable(.{
+            .name = "updateconfig",
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("updateconfig.zig"),
+                .target = b.graph.host,
+            }),
+        });
+
+        const update_config = b.addRunArtifact(updateconfig_exe);
+        update_config.has_side_effects = true;
+        update_config.setCwd(b.path("."));
+        update_config.addArg(b.graph.zig_exe);
+        b.step("update-config", "Test every combination of inputs missing from config.txt").dependOn(&update_config.step);
+
+        const verify_config = b.addRunArtifact(updateconfig_exe);
+        verify_config.has_side_effects = true;
+        verify_config.setCwd(b.path("."));
+        verify_config.addArg(b.graph.zig_exe);
+        verify_config.addArg("--verify");
+        b.step("verify-config", "Test every combination in config.txt again, a difference means an input is missing").dependOn(&verify_config.step);
+
+        const check_config = b.addRunArtifact(updateconfig_exe);
+        check_config.has_side_effects = true;
+        check_config.setCwd(b.path("."));
+        check_config.addArg(b.graph.zig_exe);
+        check_config.addArg("--check");
+        b.step("check-config", "Fail if config.txt is missing a combination of inputs").dependOn(&check_config.step);
+    }
 
     const upstream: *std.Build.Dependency = switch (version) {
         .@"3.11.13" => if (b.lazyDependency("upstream_3.11.13", .{})) |d| d else noUpstream(b),
@@ -100,7 +123,8 @@ pub fn build(b: *std.Build) !void {
         .replace_exe = replace_exe,
         .makesetup_exe = makesetup_exe,
     });
-    const pyconfig_host = try addPyconfig(b, version, upstream, b.graph.host, .{ .zlib = null, .openssl = null }, configquery_exe);
+    const config_file = readConfigFile(b);
+    const pyconfig_host = addPyconfig(b, config_file, version, upstream, b.graph.host, .{ .zlib = null, .openssl = null });
 
     const freeze_module_exe = addPythonExe(b, upstream, b.graph.host, .Debug, .{
         .name = "freeze_module",
@@ -209,7 +233,7 @@ pub fn build(b: *std.Build) !void {
     const final_exe = addPythonExe(b, upstream, target, optimize, .{
         .name = "python",
         .makesetup_out = makesetup_target,
-        .pyconfig = try addPyconfig(b, version, upstream, target, libs_target, configquery_exe),
+        .pyconfig = addPyconfig(b, config_file, version, upstream, target, libs_target),
         .stage = .{
             .final = .{
                 .stage2 = stage2_frozen_mods,
@@ -231,7 +255,7 @@ pub fn build(b: *std.Build) !void {
     try ci(b, version, ssl_enabled, upstream, ci_step, .{
         .replace_exe = replace_exe,
         .makesetup_exe = makesetup_exe,
-        .configquery_exe = configquery_exe,
+        .config_file = config_file,
         .stage2_frozen_mods = stage2_frozen_mods,
         .frozen_headers = frozen_headers,
         .deepfreeze_c = deepfreeze_c,
@@ -672,14 +696,24 @@ const Libs = struct {
     openssl: ?*std.Build.Step.Compile,
 };
 
+/// This can't use @embedFile because then build.zig wouldn't compile without config.txt, and
+/// update-config couldn't create it.
+fn readConfigFile(b: *std.Build) config.File {
+    const content = b.build_root.handle.readFileAlloc(b.graph.io, "config.txt", b.allocator, .unlimited) catch |err| switch (err) {
+        error.FileNotFound => return .{},
+        else => |e| std.debug.panic("failed to read config.txt with {t}", .{e}),
+    };
+    return config.parse(b.allocator, "config.txt", content);
+}
+
 fn addPyconfig(
     b: *std.Build,
+    config_file: config.File,
     version: Version,
     upstream: *std.Build.Dependency,
     target: std.Build.ResolvedTarget,
     libs: Libs,
-    configquery_exe: *std.Build.Step.Compile,
-) !Pyconfig {
+) Pyconfig {
     const t = target.result;
     if (t.os.tag == .windows) return .{
         .version = version,
@@ -690,219 +724,84 @@ fn addPyconfig(
     const config_header = b.addConfigHeader(.{
         .style = .{ .autoconf_undef = upstream.path("pyconfig.h.in") },
         .include_path = "pyconfig.h",
-    }, .{
-        .ALIGNOF_LONG = 8,
-        .ALIGNOF_SIZE_T = 8,
-        .DOUBLE_IS_LITTLE_ENDIAN_IEEE754 = 1,
-        .ENABLE_IPV6 = 1,
-        .MAJOR_IN_SYSMACROS = have(t.os.tag == .linux),
-        .PTHREAD_KEY_T_IS_COMPATIBLE_WITH_INT = 1,
-        .PTHREAD_SYSTEM_SCHED_SUPPORTED = 1,
-        .PY_BUILTIN_HASHLIB_HASHES = "md5,sha1,sha256,sha512,sha3,blake2",
-        .PY_COERCE_C_LOCALE = 1,
-        .PY_SSL_DEFAULT_CIPHERS = 1,
-        .PY_SUPPORT_TIER = 2,
-        .RETSIGTYPE = .void,
-        .SIZEOF_DOUBLE = 8,
-        .SIZEOF_FLOAT = 4,
-        .SIZEOF_FPOS_T = 16,
-        .SIZEOF_INT = 4,
-        .SIZEOF_LONG = 8,
-        .SIZEOF_LONG_DOUBLE = 16,
-        .SIZEOF_LONG_LONG = 8,
-        .SIZEOF_OFF_T = 8,
-        .SIZEOF_PID_T = 4,
-        .SIZEOF_PTHREAD_KEY_T = 4,
-        .SIZEOF_PTHREAD_T = 8,
-        .SIZEOF_SHORT = 2,
-        .SIZEOF_SIZE_T = 8,
-        .SIZEOF_TIME_T = 8,
-        .SIZEOF_UINTPTR_T = 8,
-        .SIZEOF_VOID_P = 8,
-        .SIZEOF_WCHAR_T = 4,
-        .SIZEOF__BOOL = 1,
-        .STDC_HEADERS = 1,
-        .SYS_SELECT_WITH_SYS_TIME = 1,
-        .WITH_DECIMAL_CONTEXTVAR = 1,
-        .WITH_DOC_STRINGS = 1,
-        .WITH_FREELISTS = 1,
-        .WITH_PYMALLOC = 1,
-        ._DARWIN_C_SOURCE = 1,
-        ._FILE_OFFSET_BITS = 64,
-        ._LARGEFILE_SOURCE = 1,
-        ._NETBSD_SOURCE = 1,
-        ._POSIX_C_SOURCE = .@"200809L",
-        ._PYTHONFRAMEWORK = "",
-        ._REENTRANT = 1,
-        ._XOPEN_SOURCE = 700,
-        ._XOPEN_SOURCE_EXTENDED = 1,
-        .__BSD_VISIBLE = 1,
-        ._ALL_SOURCE = 1,
-        ._GNU_SOURCE = 1,
-        ._POSIX_PTHREAD_SEMANTICS = 1,
-        ._TANDEM_SOURCE = 1,
-        .__EXTENSIONS__ = 1,
-
-        .AC_APPLE_UNIVERSAL_BUILD = null,
-        .AIX_BUILDDATE = null,
-        .AIX_GENUINE_CPLUSPLUS = null,
-        .ALT_SOABI = null,
-        .ANDROID_API_LEVEL = null,
-        .DOUBLE_IS_ARM_MIXED_ENDIAN_IEEE754 = null,
-        .DOUBLE_IS_BIG_ENDIAN_IEEE754 = null,
-        .GETPGRP_HAVE_ARG = null,
-        .MAJOR_IN_MKDEV = null,
-        .MVWDELCH_IS_EXPRESSION = null,
-        .PACKAGE_BUGREPORT = null,
-        .PACKAGE_NAME = null,
-        .PACKAGE_STRING = null,
-        .PACKAGE_TARNAME = null,
-        .PACKAGE_URL = null,
-        .PACKAGE_VERSION = null,
-        .POSIX_SEMAPHORES_NOT_ENABLED = null,
-        .PYLONG_BITS_IN_DIGIT = null,
-        .PY_SQLITE_ENABLE_LOAD_EXTENSION = null,
-        .PY_SQLITE_HAVE_SERIALIZE = null,
-        .PY_SSL_DEFAULT_CIPHER_STRING = null,
-        .Py_DEBUG = null,
-        .Py_ENABLE_SHARED = null,
-        .Py_HASH_ALGORITHM = null,
-        .Py_STATS = null,
-        .Py_SUNOS_VERSION = null,
-        .Py_TRACE_REFS = null,
-        .SETPGRP_HAVE_ARG = null,
-        .SIGNED_RIGHT_SHIFT_ZERO_FILLS = null,
-        .THREAD_STACK_SIZE = null,
-        .TIMEMODULE_LIB = null,
-        .TM_IN_SYS_TIME = null,
-        .USE_COMPUTED_GOTOS = null,
-        .WINDOW_HAS_FLAGS = null,
-        .WITH_DTRACE = null,
-        .WITH_DYLD = null,
-        .WITH_EDITLINE = null,
-        .WITH_LIBINTL = null,
-        .WITH_NEXT_FRAMEWORK = null,
-        .WITH_VALGRIND = null,
-        .X87_DOUBLE_ROUNDING = null,
-        ._BSD_SOURCE = null,
-        ._INCLUDE__STDC_A1_SOURCE = null,
-        ._LARGE_FILES = null,
-        ._MINIX = null,
-        ._POSIX_1_SOURCE = null,
-        ._POSIX_SOURCE = null,
-        ._POSIX_THREADS = null,
-        ._WASI_EMULATED_GETPID = null,
-        ._WASI_EMULATED_PROCESS_CLOCKS = null,
-        ._WASI_EMULATED_SIGNAL = null,
-        .clock_t = null,
-        .@"const" = null,
-        .gid_t = null,
-        .mode_t = null,
-        .off_t = null,
-        .pid_t = null,
-        .signed = null,
-        .size_t = null,
-        .socklen_t = null,
-        .uid_t = null,
-        .WORDS_BIGENDIAN = null,
-
-        .HAVE_BROKEN_MBSTOWCS = null,
-        .HAVE_BROKEN_NICE = null,
-        .HAVE_BROKEN_PIPE_BUF = null,
-        .HAVE_BROKEN_POLL = null,
-        .HAVE_BROKEN_POSIX_SEMAPHORES = null,
-        .HAVE_BROKEN_PTHREAD_SIGMASK = null,
-        .HAVE_BROKEN_SEM_GETVALUE = null,
-        .HAVE_BROKEN_UNSETENV = null,
-
-        .HAVE_PTHREAD_STUBS = null,
-        .HAVE_USABLE_WCHAR_T = null,
-        .HAVE_NON_UNICODE_WCHAR_T_REPRESENTATION = null,
-        .HAVE_CHROOT = have(t.os.tag == .linux),
-        .HAVE_GCC_ASM_FOR_MC68881 = have(t.cpu.arch == .m68k),
-        .HAVE_GCC_ASM_FOR_X64 = have(t.cpu.arch == .x86_64),
-        .HAVE_GCC_ASM_FOR_X87 = have(t.cpu.arch == .x86_64 or t.cpu.arch == .x86),
-        // Readline type (static configuration, not function test)
-        .HAVE_RL_COMPDISP_FUNC_T = null,
-    });
-    switch (version) {
-        .@"3.11.13" => config_header.addValues(.{
-            .PY_FORMAT_SIZE_T = "z",
-            .TIME_WITH_SYS_TIME = 1,
-            .FLOAT_WORDS_BIGENDIAN = null,
-        }),
-        .@"3.12.11" => config_header.addValues(.{
-            .ALIGNOF_MAX_ALIGN_T = @as(u32, switch (t.cpu.arch) {
-                .x86_64, .aarch64 => 16,
-                .x86, .arm => 8,
-                else => 8,
-            }),
-
-            // ncurses library (static configuration, not function test)
-            .HAVE_NCURSESW = null,
-
-            // Performance trampoline feature
-            .PY_HAVE_PERF_TRAMPOLINE = null,
-
-            ._HPUX_ALT_XOPEN_SOCKET_API = null,
-            ._OPENBSD_SOURCE = null,
-
-            // C standard feature test macros (all set to null as they're optional)
-            .__STDC_WANT_IEC_60559_ATTRIBS_EXT__ = null,
-            .__STDC_WANT_IEC_60559_BFP_EXT__ = null,
-            .__STDC_WANT_IEC_60559_DFP_EXT__ = null,
-            .__STDC_WANT_IEC_60559_FUNCS_EXT__ = null,
-            .__STDC_WANT_IEC_60559_TYPES_EXT__ = null,
-            .__STDC_WANT_LIB_EXT2__ = null,
-            .__STDC_WANT_MATH_SPEC_FUNCS__ = null,
-        }),
-    }
-
-    {
-        const run = b.addRunArtifact(configquery_exe);
-        run.addArg("--zig-exe");
-        run.addArg(b.graph.zig_exe);
-        if (b.cache_root.path) |cache_root| {
-            run.addArg("--cache-dir");
-            run.addArg(cache_root);
-        }
-        run.addArg("-target");
-        run.addArg(try target.query.zigTriple(b.allocator));
-        run.addArg("-mcpu");
-        run.addArg(try target.query.serializeCpuAlloc(b.allocator));
-        if (libs.zlib) |zlib| run.addPrefixedDirectoryArg("-I", zlib.getEmittedIncludeTree());
-        if (libs.openssl) |openssl| run.addPrefixedDirectoryArg("-I", openssl.getEmittedIncludeTree());
-        run.addFileArg(b.path("config-common"));
-        run.addFileArg(switch (version) {
-            .@"3.11.13" => b.path("config-3.11.13"),
-            .@"3.12.11" => b.path("config-3.12.11"),
-        });
-        run.addArg("-o");
-        ConfigHeaderExt.addFile(config_header, run.addOutputFileArg("config"));
-    }
-
-    return .{
+    }, .{});
+    const pyconfig: Pyconfig = .{
         .version = version,
         .libs = libs,
         .header = .{ .config_header = config_header },
     };
+
+    // these fail the steps that need this config rather than the configure phase, otherwise
+    // update-config couldn't run to fix them
+    var inputs: config.Inputs = .{
+        builtin.zig_version_string,
+        @tagName(version),
+        @tagName(t.os.tag),
+        @tagName(t.cpu.arch),
+        @tagName(t.abi),
+        config.no_glibc,
+    };
+    const description = b.fmt("zig {s} python {s} {s}-{s}-{s}", .{ inputs[0], inputs[1], inputs[3], inputs[2], inputs[4] });
+    if (t.isGnuLibC()) {
+        const glibc = t.os.version_range.linux.glibc;
+        inputs[config.glibc_input] = findGlibc(b, config_file, inputs, glibc) orelse {
+            config_header.step.dependOn(&b.addFail(
+                b.fmt("config.txt doesn't have {s} with glibc {f} or older, zig build update-config tests every glibc that python can link with", .{ description, glibc }),
+            ).step);
+            return pyconfig;
+        };
+    }
+    const verified = config_file.verified.eval(inputs);
+    if (verified != .ident or !std.mem.eql(u8, verified.ident, "yes")) {
+        config_header.step.dependOn(&b.addFail(if (verified == .absent)
+            b.fmt("config.txt doesn't have {s}, run: zig build update-config", .{description})
+        else
+            b.fmt("config.txt says configure fails for {s} with glibc {s}", .{ description, inputs[config.glibc_input] })).step);
+        return pyconfig;
+    }
+
+    for (config_file.values) |entry| {
+        var value = entry.eval(inputs);
+        if (value == .absent) continue;
+        // these depend on the build rather than the target
+        if (std.mem.eql(u8, entry.name, "HAVE_ZLIB_H") or std.mem.eql(u8, entry.name, "HAVE_ZLIB_COPY")) {
+            value = if (libs.zlib != null) .{ .int = 1 } else .undef;
+        } else if (std.mem.eql(u8, entry.name, "PY_HAVE_PERF_TRAMPOLINE")) {
+            // this also needs Python/asm_trampoline.S which isn't compiled
+            value = .undef;
+        }
+        switch (value) {
+            .absent => unreachable,
+            .undef => config_header.addValue(entry.name, @TypeOf(null), null),
+            .defined => config_header.addValue(entry.name, void, {}),
+            .int => |int| config_header.addValue(entry.name, i64, int),
+            .string => |string| config_header.addValue(entry.name, []const u8, string),
+            .ident => |ident| config_header.addIdent(entry.name, ident),
+        }
+    }
+    return pyconfig;
 }
 
-fn have(x: bool) ?u1 {
-    return if (x) 1 else null;
-}
-
-const Config = struct { name: []const u8, string: []const u8 };
-fn concatConfigs(comptime first: anytype, comptime second: anytype) [std.meta.fields(@TypeOf(first)).len + std.meta.fields(@TypeOf(second)).len]Config {
-    const first_len = std.meta.fields(@TypeOf(first)).len;
-    var result: [first_len + std.meta.fields(@TypeOf(second)).len]Config = undefined;
-    inline for (std.meta.fields(@TypeOf(first)), result[0..first_len]) |field, *config| {
-        config.* = .{ .name = @tagName(@field(first, field.name)[0]), .string = @field(first, field.name)[1] };
+/// The newest glibc in config.txt for these inputs that isn't newer than `glibc`. Zig links against
+/// its newest glibc when asked for a newer one, which is the newest one config.txt has.
+fn findGlibc(b: *std.Build, config_file: config.File, inputs: config.Inputs, glibc: std.SemanticVersion) ?[]const u8 {
+    var best: ?[]const u8 = null;
+    var best_version: std.SemanticVersion = undefined;
+    for (config_file.verified.when) |when| {
+        // a line from before glibc was an input doesn't have it, update-config will test it again
+        for (when.lists[config.glibc_input] orelse continue) |item| {
+            var candidate = inputs;
+            candidate[config.glibc_input] = item;
+            if (!when.matches(candidate)) continue;
+            const version = std.SemanticVersion.parse(b.fmt("{s}.0", .{item})) catch std.debug.panic("config.txt has an invalid glibc '{s}'", .{item});
+            if (version.order(.{ .major = glibc.major, .minor = glibc.minor, .patch = 0 }) == .gt) continue;
+            if (best == null or version.order(best_version) == .gt) {
+                best = item;
+                best_version = version;
+            }
+        }
     }
-    inline for (std.meta.fields(@TypeOf(second)), result[first_len..]) |field, *config| {
-        config.* = .{ .name = @tagName(@field(second, field.name)[0]), .string = @field(second, field.name)[1] };
-    }
-    return result;
+    return best;
 }
 
 const python_src = struct {
@@ -1136,7 +1035,7 @@ fn ci(
     args: struct {
         replace_exe: *std.Build.Step.Compile,
         makesetup_exe: *std.Build.Step.Compile,
-        configquery_exe: *std.Build.Step.Compile,
+        config_file: config.File,
         stage2_frozen_mods: Stage2FrozenMods,
         frozen_headers: []const std.Build.LazyPath,
         deepfreeze_c: std.Build.LazyPath,
@@ -1190,7 +1089,7 @@ fn ci(
         const exe = addPythonExe(b, upstream, target, optimize, .{
             .name = "python",
             .makesetup_out = makesetup,
-            .pyconfig = try addPyconfig(b, version, upstream, target, libs, args.configquery_exe),
+            .pyconfig = addPyconfig(b, args.config_file, version, upstream, target, libs),
             .stage = .{ .final = .{
                 .stage2 = args.stage2_frozen_mods,
                 .frozen_headers = args.frozen_headers,
@@ -1222,4 +1121,5 @@ fn concat(allocator: std.mem.Allocator, lists: []const []const []const u8) []con
 }
 
 const std = @import("std");
-const ConfigHeaderExt = @import("ConfigHeaderExt.zig");
+const builtin = @import("builtin");
+const config = @import("config.zig");
