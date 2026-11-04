@@ -4,6 +4,7 @@ pub fn main(init: std.process.Init) !void {
 
     var template_files: std.ArrayList([]const u8) = .empty;
     var output_path: ?[]const u8 = null;
+    var header_template_path: ?[]const u8 = null;
     var config: Config = .{};
 
     {
@@ -12,6 +13,8 @@ pub fn main(init: std.process.Init) !void {
         while (args.next()) |arg| {
             if (std.mem.eql(u8, arg, "-o")) {
                 output_path = args.next() orelse fatal("-o requires an argument", .{});
+            } else if (std.mem.eql(u8, arg, "--template")) {
+                header_template_path = args.next() orelse fatal("--template requires an argument", .{});
             } else if (std.mem.eql(u8, arg, "--zig-exe")) {
                 config.zig_exe = args.next() orelse fatal("--zig-exe requires an argument", .{});
             } else if (std.mem.eql(u8, arg, "--cache-dir")) {
@@ -30,13 +33,16 @@ pub fn main(init: std.process.Init) !void {
 
     if (template_files.items.len == 0) {
         const usage =
-            \\Usage: configquery [options] [template-files]
+            \\Usage: configquery --template <header.h.in> [options] [template-files]
             \\
             \\Processes template files line by line. Lines starting with # are
             \\comments. Each line is NAME VALUE where VALUE is either a literal
-            \\or a query starting with ?.
+            \\or a query starting with ?. The resulting values replace the
+            \\"#undef NAME" lines of the autoconf header template, every
+            \\"#undef" line needs a value and every value must be used.
             \\
             \\Options:
+            \\  --template <path>         The autoconf header template (i.e. pyconfig.h.in)
             \\  -o <path>                 Write output to file (default: stdout)
             \\  --zig-exe [exe]           Path to zig executable (for compile queries)
             \\  -target [name]            <arch><sub>-<os>-<abi> see the targets command
@@ -62,11 +68,17 @@ pub fn main(init: std.process.Init) !void {
             \\header/symbol availability matches library symbol availability.
             \\
         ;
-        var stderr = std.Io.File.stderr().writer(io, &.{});
+        var stderr = std.Io.File.stderr().writerStreaming(io, &.{});
         stderr.interface.writeAll(usage) catch return stderr.err.?;
         stderr.interface.flush() catch return stderr.err.?;
         std.process.exit(1);
     }
+
+    const header_template_path_ = header_template_path orelse fatal("missing --template", .{});
+    const header_template = std.Io.Dir.cwd().readFileAlloc(io, header_template_path_, arena, .unlimited) catch |err| fatal(
+        "failed to read '{s}' with {t}",
+        .{ header_template_path_, err },
+    );
 
     var out_buf: [4096]u8 = undefined;
     var out_file = if (output_path) |path| std.Io.Dir.cwd().createFile(io, path, .{}) catch |err| fatal(
@@ -74,11 +86,12 @@ pub fn main(init: std.process.Init) !void {
         .{ path, err },
     ) else std.Io.File.stdout();
     defer if (output_path != null) out_file.close(io);
-    var out_writer = out_file.writer(io, &out_buf);
+    var out_writer = out_file.writerStreaming(io, &out_buf);
     const out = &out_writer.interface;
 
     var queries: std.ArrayList(Query) = .empty;
     var name_set: std.StringHashMapUnmanaged(u32) = .empty;
+    var values: std.StringArrayHashMapUnmanaged(Value) = .empty;
     var error_count: u32 = 0;
 
     for (template_files.items) |template_path| {
@@ -98,7 +111,7 @@ pub fn main(init: std.process.Init) !void {
                 },
                 .literal => |lit| {
                     checkUnique(arena, &name_set, io, template_path, line_num, lit.config_name, &error_count);
-                    out.print("{s} {s}\n", .{ lit.config_name, lit.value_str }) catch return out_writer.err.?;
+                    values.put(arena, lit.config_name, .{ .text = lit.value_str }) catch |e| oom(e);
                 },
                 .query => |input| {
                     checkUnique(arena, &name_set, io, template_path, line_num, input.config_name, &error_count);
@@ -109,7 +122,7 @@ pub fn main(init: std.process.Init) !void {
                             .line_num = line_num,
                         }) catch |e| oom(e);
                     } else {
-                        out.print("{s} {s}\n", .{ input.config_name, input.pass_text }) catch return out_writer.err.?;
+                        values.put(arena, input.config_name, .{ .text = input.pass_text }) catch |e| oom(e);
                     }
                 },
             }
@@ -134,7 +147,7 @@ pub fn main(init: std.process.Init) !void {
         for (queries.items) |*q| {
             const result = q.result orelse fatal("compile query for '{s}' has no result", .{q.input.config_name});
             const value_text = if (result.success) q.input.pass_text else q.input.fail_text;
-            out.print("{s}{s} {s}\n", .{ result.error_comments, q.input.config_name, value_text }) catch return out_writer.err.?;
+            values.put(arena, q.input.config_name, .{ .text = value_text, .comments = result.error_comments }) catch |e| oom(e);
             if (result.fatal_msg) |msg| {
                 error_count += 1;
                 reportError(io, q.file_path, q.line_num, "{s}", .{msg});
@@ -142,8 +155,84 @@ pub fn main(init: std.process.Init) !void {
         }
     }
 
+    error_count += renderAutoconfUndef(io, header_template_path_, header_template, &values, out) catch return out_writer.err.?;
+    for (values.keys(), values.values()) |name, value| {
+        if (value.used) continue;
+        reportError(io, header_template_path_, 0, "config value unused: {s}", .{name});
+        error_count += 1;
+    }
     out.flush() catch return out_writer.err.?;
     if (error_count > 0) fatal("{} errors", .{error_count});
+}
+
+const Value = struct {
+    text: []const u8,
+    /// Lines that start with "// ".
+    comments: []const u8 = "",
+    used: bool = false,
+};
+
+/// Mirrors how std.Build.Step.ConfigHeader renders its autoconf_undef style.
+fn renderAutoconfUndef(
+    io: std.Io,
+    template_path: []const u8,
+    contents: []const u8,
+    values: *std.StringArrayHashMapUnmanaged(Value),
+    w: *std.Io.Writer,
+) error{WriteFailed}!u32 {
+    const newline = blk: {
+        const lf_index = std.mem.indexOfScalar(u8, contents, '\n') orelse break :blk "\n";
+        break :blk if (lf_index > 0 and contents[lf_index - 1] == '\r') "\r\n" else "\n";
+    };
+
+    try w.writeAll("/* This file was generated by configquery. */");
+    try w.writeAll(newline);
+
+    var error_count: u32 = 0;
+    var line_num: u32 = 0;
+    var line_it = std.mem.splitScalar(u8, contents, '\n');
+    while (line_it.next()) |raw_line| {
+        line_num += 1;
+        const last_line = line_it.index == null;
+        const line = std.mem.trimEnd(u8, raw_line, "\r");
+
+        const name = blk: {
+            if (!std.mem.startsWith(u8, line, "#")) break :blk null;
+            var it = std.mem.tokenizeAny(u8, line[1..], " \t\r");
+            const directive = it.next() orelse break :blk null;
+            if (!std.mem.eql(u8, directive, "undef")) break :blk null;
+            break :blk it.next();
+        } orelse {
+            try w.writeAll(line);
+            if (!last_line) try w.writeAll(newline);
+            continue;
+        };
+        const value = values.getPtr(name) orelse {
+            reportError(io, template_path, line_num, "unspecified config value: {s}", .{name});
+            error_count += 1;
+            continue;
+        };
+        value.used = true;
+        var comment_it = std.mem.splitScalar(u8, value.comments, '\n');
+        while (comment_it.next()) |comment| if (comment.len > 0) {
+            // a trailing backslash would continue the comment onto the next line
+            try w.writeAll(std.mem.trimEnd(u8, comment, "\\ \t\r"));
+            try w.writeAll(newline);
+        };
+        switch (ConfigHeaderExt.parseValue(value.text).?) {
+            .undef => try w.print("/* #undef {s} */", .{name}),
+            .defined => try w.print("#define {s}", .{name}),
+            .boolean => |b| try w.print("#define {s} {c}", .{ name, @as(u8, '0') + @intFromBool(b) }),
+            .int => |i| try w.print("#define {s} {d}", .{ name, i }),
+            .ident => |ident| if (ident.len > 0)
+                try w.print("#define {s} {s}", .{ name, ident })
+            else
+                try w.print("#define {s}", .{name}),
+            .string => |string| try w.print("#define {s} \"{f}\"", .{ name, std.zig.fmtString(string) }),
+        }
+        try w.writeAll(newline);
+    }
+    return error_count;
 }
 
 const Config = struct {
@@ -375,10 +464,10 @@ fn doCompileCheck(
     }
 
     var comments: std.ArrayList(u8) = .empty;
-    comments.appendSlice(arena, std.fmt.allocPrint(arena, "# compilation for '{s}' failed with the following:\n", .{query.input.config_name}) catch |e| oom(e)) catch |e| oom(e);
+    comments.appendSlice(arena, std.fmt.allocPrint(arena, "// compilation for '{s}' failed with the following:\n", .{query.input.config_name}) catch |e| oom(e)) catch |e| oom(e);
     var stderr_it = std.mem.splitScalar(u8, result.stderr, '\n');
     while (stderr_it.next()) |stderr_line| {
-        if (stderr_line.len > 0) comments.appendSlice(arena, std.fmt.allocPrint(arena, "# {s}\n", .{stderr_line}) catch |e| oom(e)) catch |e| oom(e);
+        if (stderr_line.len > 0) comments.appendSlice(arena, std.fmt.allocPrint(arena, "// {s}\n", .{stderr_line}) catch |e| oom(e)) catch |e| oom(e);
     }
 
     var has_expected_error = false;
@@ -497,7 +586,7 @@ test parseLine {
 }
 
 fn reportError(io: std.Io, file: []const u8, line: u32, comptime fmt: []const u8, args: anytype) void {
-    var stderr = std.Io.File.stderr().writer(io, &.{});
+    var stderr = std.Io.File.stderr().writerStreaming(io, &.{});
     stderr.interface.print("{s}:{}: " ++ fmt ++ "\n", .{ file, line } ++ args) catch
         fatal("failed to write to stderr: {t}", .{stderr.err.?});
 }

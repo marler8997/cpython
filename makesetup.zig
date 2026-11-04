@@ -1,57 +1,6 @@
 const std = @import("std");
-const Io = std.Io;
-const print = std.debug.print;
-const ArrayListUnmanaged = std.ArrayListUnmanaged;
-const Allocator = std.mem.Allocator;
 
-pub fn main(init: std.process.Init) !void {
-    const arena = init.arena.allocator();
-    const all_args = try init.minimal.args.toSlice(arena);
-    const io = init.io;
-
-    if (all_args.len <= 1) {
-        var stderr = std.Io.File.stderr().writer(io, &.{});
-        try stderr.interface.writeAll("usage: makesetup UPSTREAM_SRC OUT_DIR SETUP_FILES...\n");
-        std.process.exit(0xff);
-    }
-    const args = all_args[1..];
-    if (args.len < 3) errExit("expected at least 3 cmdline args but got {}", .{args.len});
-
-    const upstream_src = args[0];
-    const out_path = args[1];
-    const setup_files = args[2..];
-
-    const setup = try parseSetupFiles(arena, io, setup_files);
-
-    const config_in_path = std.Io.Dir.path.join(arena, &.{ upstream_src, "Modules", "config.c.in" }) catch |e| oom(e);
-    const config_in = std.Io.Dir.cwd().readFileAlloc(io, config_in_path, arena, .unlimited) catch |e|
-        std.debug.panic("open file '{s}' failed with {t}", .{ config_in_path, e });
-
-    var out_dir = try std.Io.Dir.cwd().createDirPathOpen(io, out_path, .{});
-    defer out_dir.close(io);
-
-    {
-        var file = try out_dir.createFile(io, "config.c", .{});
-        defer file.close(io);
-        var out_file_buf: [4096]u8 = undefined;
-        var file_writer = file.writer(io, &out_file_buf);
-        writeConfigC(setup, config_in_path, config_in, &file_writer.interface) catch |err| switch (err) {
-            error.WriteFailed => return file_writer.err orelse error.Unexpected,
-        };
-    }
-
-    {
-        var out_file = try out_dir.createFile(io, "module-compile-args.txt", .{});
-        defer out_file.close(io);
-        var out_file_buf: [4096]u8 = undefined;
-        var file_writer = out_file.writer(io, &out_file_buf);
-        writeCompileArgs(setup, &file_writer.interface) catch |err| switch (err) {
-            error.WriteFailed => return file_writer.err orelse error.Unexpected,
-        };
-    }
-}
-
-fn writeConfigC(
+pub fn writeConfigC(
     setup: Setup,
     config_in_path: []const u8,
     config_in: []const u8,
@@ -79,56 +28,29 @@ fn writeConfigC(
     try writer.flush();
 }
 
-fn writeCompileArgs(setup: Setup, writer: *std.Io.Writer) error{WriteFailed}!void {
-    var it = setup.modules.iterator();
-    while (it.next()) |entry| {
-        const module_name = entry.key_ptr.*;
-        {
-            const suffix: []const u8 = if (entry.value_ptr.enabled) "" else " (DISABLED)";
-            try writer.print("# Module '{s}'{s}\n", .{ module_name, suffix });
-        }
-        const prefix: []const u8 = if (entry.value_ptr.enabled) "" else "# ";
-        for (entry.value_ptr.compile_args) |compile_arg| switch (compile_arg) {
-            .source => |src| try writer.print("{s}Modules/{s}\n", .{ prefix, src }),
-            .include => |inc| try writer.print("{s}-I{s}\n", .{ prefix, inc }),
-        };
-    }
-    try writer.flush();
-}
-
-const CompileArg = union(enum) {
+pub const CompileArg = union(enum) {
     source: []const u8,
     include: []const u8,
 };
 
 const Kind = enum { static, shared };
-const Module = struct {
+pub const Module = struct {
     kind: ?Kind,
     enabled: bool,
     defines: []const []const u8,
     compile_args: []const CompileArg,
     libs: []const []const u8,
 };
-const Setup = struct {
+pub const Setup = struct {
     modules: std.StringArrayHashMapUnmanaged(Module) = .{},
 };
 
-fn parseSetupFiles(arena: std.mem.Allocator, io: Io, setup_files: []const []const u8) !Setup {
-    var setup: Setup = .{};
-    for (setup_files) |file_path| {
-        const content = std.Io.Dir.cwd().readFileAlloc(io, file_path, arena, .unlimited) catch |e|
-            std.debug.panic("open '{s}' failed with {t}", .{ file_path, e });
-        try parseSetupFile(arena, &setup, file_path, content);
-    }
-    return setup;
-}
-
-fn parseSetupFile(
+pub fn parseSetupFile(
     arena: std.mem.Allocator,
     setup: *Setup,
     file_path: []const u8,
     content: []const u8,
-) !void {
+) void {
     var kind: ?Kind = null;
     var block_enabled: bool = true;
     var defs: std.StringHashMapUnmanaged([]const u8) = .{};
@@ -284,6 +206,5 @@ fn oom(e: error{OutOfMemory}) noreturn {
     errExit("{s}", .{@errorName(e)});
 }
 fn errExit(comptime fmt: []const u8, args: anytype) noreturn {
-    std.log.err(fmt, args);
-    std.process.exit(0xff);
+    std.debug.panic(fmt, args);
 }

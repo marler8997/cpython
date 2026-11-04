@@ -2,7 +2,7 @@
     .name = .cpython,
     .fingerprint = 0x3224901d1babdd14,
     .version = "0.1.0",
-    .minimum_zig_version = "0.16.0",
+    .minimum_zig_version = "0.17.0",
     .dependencies = .{
         .@"upstream_3.11.13" = .{
             .url = "git+https://github.com/python/cpython#498b971ea3673012a1d4b21860b229d55fc6e575",

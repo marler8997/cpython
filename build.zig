@@ -43,13 +43,6 @@ const Stage2FrozenMods = struct {
 pub fn build(b: *std.Build) !void {
     const version: Version = b.option(Version, "version", "Python Version") orelse .latest;
 
-    const replace_exe = b.addExecutable(.{
-        .name = "replace",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("replace.zig"),
-            .target = b.graph.host,
-        }),
-    });
     const configquery_exe = b.addExecutable(.{
         .name = "configquery",
         .root_module = b.createModule(.{
@@ -57,17 +50,9 @@ pub fn build(b: *std.Build) !void {
             .target = b.graph.host,
         }),
     });
-    const makesetup_exe = b.addExecutable(.{
-        .name = "makesetup",
-        .root_module = b.createModule(.{
-            .root_source_file = b.path("makesetup.zig"),
-            .target = b.graph.host,
-        }),
-    });
-
-    const upstream: *std.Build.Dependency = switch (version) {
-        .@"3.11.13" => if (b.lazyDependency("upstream_3.11.13", .{})) |d| d else noUpstream(b),
-        .@"3.12.11" => if (b.lazyDependency("upstream_3.12.11", .{})) |d| d else noUpstream(b),
+    const maybe_upstream = switch (version) {
+        .@"3.11.13" => b.lazyDependency("upstream_3.11.13", .{}),
+        .@"3.12.11" => b.lazyDependency("upstream_3.12.11", .{}),
     };
 
     const target = b.standardTargetOptions(.{});
@@ -90,16 +75,15 @@ pub fn build(b: *std.Build) !void {
         })) |dep| dep.artifact("openssl") else null) else null,
     };
 
-    const makesetup_host = addMakesetup(b, version, upstream, libs_host, .{
-        .os_tag = b.graph.host.result.os.tag,
-        .replace_exe = replace_exe,
-        .makesetup_exe = makesetup_exe,
-    });
-    const makesetup_target = addMakesetup(b, version, upstream, libs_target, .{
-        .os_tag = target.result.os.tag,
-        .replace_exe = replace_exe,
-        .makesetup_exe = makesetup_exe,
-    });
+    // the build graph is configured from the upstream Setup files so wait for it to be fetched
+    const upstream = maybe_upstream orelse {
+        // packages that depend on us can get our named write files before the upstream is fetched
+        _ = b.addNamedWriteFiles("python");
+        return;
+    };
+
+    const makesetup_host = addMakesetup(b, version, upstream, libs_host, b.graph.host.result.os.tag);
+    const makesetup_target = addMakesetup(b, version, upstream, libs_target, target.result.os.tag);
     const pyconfig_host = try addPyconfig(b, version, upstream, b.graph.host, .{ .zlib = null, .openssl = null }, configquery_exe);
 
     const freeze_module_exe = addPythonExe(b, upstream, b.graph.host, .Debug, .{
@@ -167,39 +151,8 @@ pub fn build(b: *std.Build) !void {
         }));
         run.addArg("-o");
         const deepfreeze_c = run.addOutputFileArg("deepfreeze.c");
-        {
-            // Need to create a custom step because std.Build.Step.Run doesn't
-            // have addSuffixedOutputArg.
-            const AddModules = struct {
-                step: std.Build.Step,
-                version: Version,
-                run_deepfreeze: *std.Build.Step.Run,
-                headers: []const std.Build.LazyPath,
-            };
-            const add_modules_make = struct {
-                fn make(step: *std.Build.Step, options: std.Build.Step.MakeOptions) anyerror!void {
-                    _ = options;
-                    const b2 = step.owner;
-                    const self: *AddModules = @fieldParentPtr("step", step);
-                    for (frozenModuleNames(self.version), self.headers) |mod_name, header| {
-                        self.run_deepfreeze.addArg(b2.fmt("{s}:{s}", .{ header.getPath(b2), mod_name }));
-                    }
-                }
-            }.make;
-            const add_modules = b.allocator.create(AddModules) catch @panic("OOM");
-            add_modules.* = .{
-                .step = std.Build.Step.init(.{
-                    .id = .custom,
-                    .name = "add modules to run deepfreeze.py",
-                    .owner = b,
-                    .makeFn = &add_modules_make,
-                }),
-                .version = version,
-                .run_deepfreeze = run,
-                .headers = frozen_headers,
-            };
-            add_modules.step.dependOn(freeze_step);
-            run.step.dependOn(&add_modules.step);
+        for (frozenModuleNames(version), frozen_headers) |mod_name, header| {
+            run.addFileArg2(header, .{ .suffix = b.fmt(":{s}", .{mod_name}) });
         }
 
         b.step("deepfreeze", "").dependOn(&run.step);
@@ -229,8 +182,6 @@ pub fn build(b: *std.Build) !void {
     const ci_step = b.step("ci", "The build/test step to run on the CI");
     ci_step.dependOn(b.getInstallStep());
     try ci(b, version, ssl_enabled, upstream, ci_step, .{
-        .replace_exe = replace_exe,
-        .makesetup_exe = makesetup_exe,
         .configquery_exe = configquery_exe,
         .stage2_frozen_mods = stage2_frozen_mods,
         .frozen_headers = frozen_headers,
@@ -238,24 +189,14 @@ pub fn build(b: *std.Build) !void {
     });
 }
 
-fn noUpstream(b: *std.Build) *std.Build.Dependency {
-    const dependency = b.allocator.create(std.Build.Dependency) catch @panic("OOM");
-    dependency.* = .{ .builder = b };
-    return dependency;
-}
-
 fn addMakesetup(
     b: *std.Build,
     version: Version,
     upstream: *std.Build.Dependency,
     libs: Libs,
-    args: struct {
-        os_tag: std.Target.Os.Tag,
-        replace_exe: *std.Build.Step.Compile,
-        makesetup_exe: *std.Build.Step.Compile,
-    },
-) std.Build.LazyPath {
-    const is_posix = (args.os_tag != .windows);
+    os_tag: std.Target.Os.Tag,
+) Makesetup {
+    const is_posix = (os_tag != .windows);
 
     const stdlib_modules_common = .{
         ._ssl = (libs.openssl != null),
@@ -276,7 +217,7 @@ fn addMakesetup(
         ._pickle = true,
         ._queue = true,
         ._random = true,
-        ._socket = (args.os_tag != .windows),
+        ._socket = (os_tag != .windows),
         ._statistics = true,
         ._struct = true,
         ._zoneinfo = true,
@@ -303,9 +244,9 @@ fn addMakesetup(
         .fcntl = is_posix,
         ._posixshmem = is_posix,
         .grp = is_posix,
-        .ossaudiodev = (args.os_tag == .linux),
-        .resource = (args.os_tag == .linux),
-        .spwd = (args.os_tag == .linux),
+        .ossaudiodev = (os_tag == .linux),
+        .resource = (os_tag == .linux),
+        .spwd = (os_tag == .linux),
         .syslog = is_posix,
         .termios = is_posix,
 
@@ -356,53 +297,99 @@ fn addMakesetup(
         ._xxinterpchannels = false,
     };
 
-    const setup_bootstrap = blk: {
-        const replace = b.addRunArtifact(args.replace_exe);
-        replace.addFileArg(upstream.path("Modules/Setup.bootstrap.in"));
-        const out = replace.addOutputFileArg("Setup.bootstrap");
-
-        const pwd_enabled = is_posix;
-        const value_str = if (pwd_enabled) "" else "#";
-        replace.addArg(b.fmt("MODULE_PWD_TRUE={s}", .{value_str}));
-        break :blk out;
-    };
+    const setup_bootstrap = replace.replace(
+        b.allocator,
+        "Modules/Setup.bootstrap.in",
+        readUpstreamFile(b, upstream, "Modules/Setup.bootstrap.in"),
+        &.{b.fmt("MODULE_PWD_TRUE={s}", .{if (is_posix) "" else "#"})},
+    );
 
     const setup_stdlib = blk_stdlib: {
-        const replace = b.addRunArtifact(args.replace_exe);
-        replace.addFileArg(upstream.path("Modules/Setup.stdlib.in"));
-        const out = replace.addOutputFileArg("Setup.stdlib");
-        replace.addArg("MODULE_{NAME}_TRUE=MODULE_{NAME}_TRUE");
-        replace.addArg("MODULE_BUILDTYPE=static");
-        addReplaceModuleArgs(b, replace, @TypeOf(stdlib_modules_common), stdlib_modules_common);
+        var replacements: std.ArrayList([]const u8) = .empty;
+        replacements.appendSlice(b.allocator, &.{
+            "MODULE_{NAME}_TRUE=MODULE_{NAME}_TRUE",
+            "MODULE_BUILDTYPE=static",
+        }) catch @panic("OOM");
+        addReplaceModuleArgs(b, &replacements, stdlib_modules_common);
         switch (version) {
-            .@"3.11.13" => addReplaceModuleArgs(b, replace, @TypeOf(@"stdlib_modules_3.11.13"), @"stdlib_modules_3.11.13"),
+            .@"3.11.13" => addReplaceModuleArgs(b, &replacements, @"stdlib_modules_3.11.13"),
             .@"3.12.11" => {
-                replace.addArg("MODULE__CTYPES_MALLOC_CLOSURE=");
-                addReplaceModuleArgs(b, replace, @TypeOf(@"stdlib_modules_3.12.11"), @"stdlib_modules_3.12.11");
+                replacements.append(b.allocator, "MODULE__CTYPES_MALLOC_CLOSURE=") catch @panic("OOM");
+                addReplaceModuleArgs(b, &replacements, @"stdlib_modules_3.12.11");
             },
         }
-        break :blk_stdlib out;
+        break :blk_stdlib replace.replace(
+            b.allocator,
+            "Modules/Setup.stdlib.in",
+            readUpstreamFile(b, upstream, "Modules/Setup.stdlib.in"),
+            replacements.items,
+        );
     };
 
-    const generate = b.addRunArtifact(args.makesetup_exe);
-    generate.addDirectoryArg(upstream.path("."));
-    const makesetup_out = generate.addOutputDirectoryArg("gen");
-    generate.addFileArg(setup_bootstrap);
-    generate.addFileArg(setup_stdlib);
-    generate.addFileArg(upstream.path("Modules/Setup"));
-    return makesetup_out;
+    var setup: makesetup.Setup = .{};
+    makesetup.parseSetupFile(b.allocator, &setup, "Setup.bootstrap", setup_bootstrap);
+    makesetup.parseSetupFile(b.allocator, &setup, "Setup.stdlib", setup_stdlib);
+    makesetup.parseSetupFile(b.allocator, &setup, "Modules/Setup", readUpstreamFile(b, upstream, "Modules/Setup"));
+
+    var config_c: std.Io.Writer.Allocating = .init(b.allocator);
+    makesetup.writeConfigC(
+        setup,
+        "Modules/config.c.in",
+        readUpstreamFile(b, upstream, "Modules/config.c.in"),
+        &config_c.writer,
+    ) catch @panic("OOM");
+
+    var c_files: std.ArrayList([]const u8) = .empty;
+    var include_sub_paths: std.ArrayList([]const u8) = .empty;
+    for (setup.modules.values()) |module| {
+        if (!module.enabled) continue;
+        for (module.compile_args) |compile_arg| switch (compile_arg) {
+            .source => |src| c_files.append(b.allocator, b.fmt("Modules/{s}", .{src})) catch @panic("OOM"),
+            .include => |inc| {
+                const prefix = "$(srcdir)/";
+                if (!std.mem.startsWith(u8, inc, prefix)) std.debug.panic(
+                    "expected include path to start with '{s}' but got: '{s}'",
+                    .{ prefix, inc },
+                );
+                include_sub_paths.append(b.allocator, inc[prefix.len..]) catch @panic("OOM");
+            },
+        };
+    }
+
+    return .{
+        .config_c = b.addWriteFiles().add("config.c", config_c.written()),
+        .c_files = c_files.items,
+        .include_sub_paths = include_sub_paths.items,
+    };
 }
 
-fn addReplaceModuleArgs(b: *std.Build, replace: *std.Build.Step.Run, comptime Modules: type, modules: Modules) void {
-    inline for (std.meta.fields(Modules)) |field| {
-        const name = field.name;
-        const value = @field(modules, name);
+/// The builtin modules configured by the upstream Setup files.
+const Makesetup = struct {
+    config_c: std.Build.LazyPath,
+    /// Relative to the upstream root.
+    c_files: []const []const u8,
+    /// Relative to the upstream root.
+    include_sub_paths: []const []const u8,
+};
+
+/// Reads a file from upstream at configure time.
+fn readUpstreamFile(b: *std.Build, upstream: *std.Build.Dependency, sub_path: []const u8) []const u8 {
+    b.dependOnFileContents(upstream.path(sub_path));
+    const path = upstream.builder.root.join(b.allocator, sub_path) catch @panic("OOM");
+    return path.root_dir.handle.readFileAlloc(b.graph.io, path.sub_path, b.allocator, .unlimited) catch |err|
+        std.debug.panic("read {f} failed with {t}", .{ path, err });
+}
+
+fn addReplaceModuleArgs(b: *std.Build, replacements: *std.ArrayList([]const u8), modules: anytype) void {
+    const info = @typeInfo(@TypeOf(modules)).@"struct";
+    inline for (info.field_names) |name| {
+        const value: bool = @field(modules, name);
         var upcase_buf: [100]u8 = undefined;
-        for (name, 0..) |c, i| {
-            upcase_buf[i] = std.ascii.toUpper(c);
-        }
         const value_str = if (value) "" else "#";
-        replace.addArg(b.fmt("MODULE_{s}_TRUE={s}", .{ upcase_buf[0..name.len], value_str }));
+        replacements.append(b.allocator, b.fmt(
+            "MODULE_{s}_TRUE={s}",
+            .{ std.ascii.upperString(&upcase_buf, name), value_str },
+        )) catch @panic("OOM");
     }
 }
 
@@ -430,10 +417,10 @@ fn addPythonExe(
     b: *std.Build,
     upstream: *std.Build.Dependency,
     target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
+    optimize: std.lang.OptimizeMode,
     args: struct {
         name: []const u8,
-        makesetup_out: std.Build.LazyPath,
+        makesetup_out: Makesetup,
         pyconfig: Pyconfig,
         stage: PythonExeStage,
     },
@@ -467,10 +454,7 @@ fn addPythonExe(
         .windows => "\"win32\"",
         else => std.debug.panic("todo: populate PLATFORM for os '{s}'", .{@tagName(target.result.os.tag)}),
     });
-    switch (args.pyconfig.header) {
-        .path => |path| exe.root_module.addIncludePath(path.dirname()),
-        .config_header => |h| exe.root_module.addConfigHeader(h),
-    }
+    exe.root_module.addIncludePath(args.pyconfig.include_dir);
     exe.root_module.addIncludePath(upstream.path("."));
     exe.root_module.addIncludePath(upstream.path("Include"));
     exe.root_module.addIncludePath(upstream.path("Include/internal"));
@@ -498,66 +482,14 @@ fn addPythonExe(
         "-DVPATH=\"\"",
     };
 
-    {
-        const AddModules = struct {
-            step: std.Build.Step,
-            upstream: *std.Build.Dependency,
-            exe: *std.Build.Step.Compile,
-            module_compile_args_file: std.Build.LazyPath,
-        };
-        const add_modules_make = struct {
-            fn make(step: *std.Build.Step, options: std.Build.Step.MakeOptions) anyerror!void {
-                _ = options;
-                const io = step.owner.graph.io;
-                const self: *AddModules = @fieldParentPtr("step", step);
-                const file_path = self.module_compile_args_file.getPath2(step.owner, step);
-
-                const module_compile_args = try std.Io.Dir.cwd().readFileAlloc(io, file_path, step.owner.allocator, .unlimited);
-                defer step.owner.allocator.free(module_compile_args);
-
-                var files: std.ArrayList([]const u8) = .empty;
-                defer files.deinit(step.owner.allocator);
-
-                var line_it = std.mem.splitScalar(u8, module_compile_args, '\n');
-                while (line_it.next()) |line| {
-                    if (line.len == 0) continue;
-                    if (std.mem.startsWith(u8, line, "# ")) continue;
-                    if (std.mem.endsWith(u8, line, ".c")) {
-                        try files.append(step.owner.allocator, line);
-                    } else if (std.mem.startsWith(u8, line, "-I")) {
-                        const path = line[2..];
-                        const prefix = "$(srcdir)/";
-                        if (!std.mem.startsWith(u8, path, prefix)) std.debug.panic(
-                            "expected include path to start with '-I{s}' but got: '{s}'",
-                            .{ prefix, line },
-                        );
-                        const inc_sub_path = step.owner.dupe(path[prefix.len..]);
-                        self.exe.root_module.addIncludePath(self.upstream.path(inc_sub_path));
-                    } else std.debug.panic("todo: parse module-compile-args line '{s}'", .{line});
-                }
-
-                self.exe.root_module.addCSourceFiles(.{
-                    .root = self.upstream.path("."),
-                    .files = files.items,
-                    .flags = &flags_common,
-                });
-            }
-        }.make;
-        const add_modules = b.allocator.create(AddModules) catch @panic("OOM");
-        add_modules.* = .{
-            .step = std.Build.Step.init(.{
-                .id = .custom,
-                .name = b.fmt("add module sources/includes to {s} exe", .{exe.name}),
-                .owner = b,
-                .makeFn = &add_modules_make,
-            }),
-            .upstream = upstream,
-            .exe = exe,
-            .module_compile_args_file = args.makesetup_out.path(b, "module-compile-args.txt"),
-        };
-        add_modules.module_compile_args_file.addStepDependencies(&add_modules.step);
-        exe.step.dependOn(&add_modules.step);
+    for (args.makesetup_out.include_sub_paths) |sub_path| {
+        exe.root_module.addIncludePath(upstream.path(sub_path));
     }
+    exe.root_module.addCSourceFiles(.{
+        .root = upstream.path("."),
+        .files = args.makesetup_out.c_files,
+        .flags = &flags_common,
+    });
 
     exe.root_module.addCSourceFiles(.{
         .root = upstream.path("."),
@@ -607,7 +539,7 @@ fn addPythonExe(
     });
 
     exe.root_module.addCSourceFile(.{
-        .file = args.makesetup_out.path(b, "config.c"),
+        .file = args.makesetup_out.config_c,
         .flags = &flags_common,
     });
 
@@ -661,10 +593,8 @@ fn addPythonExe(
 const Pyconfig = struct {
     version: Version,
     libs: Libs,
-    header: union(enum) {
-        path: std.Build.LazyPath,
-        config_header: *std.Build.Step.ConfigHeader,
-    },
+    /// The directory that contains pyconfig.h.
+    include_dir: std.Build.LazyPath,
 };
 
 const Libs = struct {
@@ -684,13 +614,11 @@ fn addPyconfig(
     if (t.os.tag == .windows) return .{
         .version = version,
         .libs = libs,
-        .header = .{ .path = upstream.path("PC/pyconfig.h") },
+        .include_dir = upstream.path("PC"),
     };
 
-    const config_header = b.addConfigHeader(.{
-        .style = .{ .autoconf_undef = upstream.path("pyconfig.h.in") },
-        .include_path = "pyconfig.h",
-    }, .{
+    var static_config: std.Io.Writer.Allocating = .init(b.allocator);
+    addConfigValues(&static_config.writer, .{
         .ALIGNOF_LONG = 8,
         .ALIGNOF_SIZE_T = 8,
         .DOUBLE_IS_LITTLE_ENDIAN_IEEE754 = 1,
@@ -826,12 +754,12 @@ fn addPyconfig(
         .HAVE_RL_COMPDISP_FUNC_T = null,
     });
     switch (version) {
-        .@"3.11.13" => config_header.addValues(.{
+        .@"3.11.13" => addConfigValues(&static_config.writer, .{
             .PY_FORMAT_SIZE_T = "z",
             .TIME_WITH_SYS_TIME = 1,
             .FLOAT_WORDS_BIGENDIAN = null,
         }),
-        .@"3.12.11" => config_header.addValues(.{
+        .@"3.12.11" => addConfigValues(&static_config.writer, .{
             .ALIGNOF_MAX_ALIGN_T = @as(u32, switch (t.cpu.arch) {
                 .x86_64, .aarch64 => 16,
                 .x86, .arm => 8,
@@ -858,51 +786,55 @@ fn addPyconfig(
         }),
     }
 
-    {
+    const pyconfig_h = blk: {
         const run = b.addRunArtifact(configquery_exe);
+        run.addArg("--template");
+        run.addFileArg(upstream.path("pyconfig.h.in"));
         run.addArg("--zig-exe");
         run.addArg(b.graph.zig_exe);
-        if (b.cache_root.path) |cache_root| {
-            run.addArg("--cache-dir");
-            run.addArg(cache_root);
-        }
+        run.addArg("--cache-dir");
+        _ = run.addOutputDirectoryArg("scratch");
         run.addArg("-target");
         run.addArg(try target.query.zigTriple(b.allocator));
         run.addArg("-mcpu");
         run.addArg(try target.query.serializeCpuAlloc(b.allocator));
         if (libs.zlib) |zlib| run.addPrefixedDirectoryArg("-I", zlib.getEmittedIncludeTree());
         if (libs.openssl) |openssl| run.addPrefixedDirectoryArg("-I", openssl.getEmittedIncludeTree());
+        run.addFileArg(b.addWriteFiles().add("config-static", static_config.written()));
         run.addFileArg(b.path("config-common"));
         run.addFileArg(switch (version) {
             .@"3.11.13" => b.path("config-3.11.13"),
             .@"3.12.11" => b.path("config-3.12.11"),
         });
         run.addArg("-o");
-        ConfigHeaderExt.addFile(config_header, run.addOutputFileArg("config"));
-    }
+        break :blk run.addOutputFileArg("pyconfig.h");
+    };
 
     return .{
         .version = version,
         .libs = libs,
-        .header = .{ .config_header = config_header },
+        .include_dir = pyconfig_h.dirname(),
     };
+}
+
+/// Writes each field of `values` as a configquery literal line "NAME VALUE".
+fn addConfigValues(w: *std.Io.Writer, values: anytype) void {
+    const info = @typeInfo(@TypeOf(values)).@"struct";
+    inline for (info.field_names, info.field_types) |name, T| {
+        const value = @field(values, name);
+        (switch (@typeInfo(T)) {
+            .null => w.print("{s} undef\n", .{name}),
+            .int, .comptime_int => w.print("{s} {d}\n", .{ name, value }),
+            .enum_literal => w.print("{s} :{s}\n", .{ name, @tagName(value) }),
+            .optional => if (value) |v| w.print("{s} {d}\n", .{ name, v }) else w.print("{s} undef\n", .{name}),
+            .pointer => w.print("{s} \"{s}\"\n", .{ name, value }),
+            else => @compileError("unsupported config value type: " ++ @typeName(T)),
+        }) catch @panic("OOM");
+    }
 }
 
 fn have(x: bool) ?u1 {
     return if (x) 1 else null;
-}
-
-const Config = struct { name: []const u8, string: []const u8 };
-fn concatConfigs(comptime first: anytype, comptime second: anytype) [std.meta.fields(@TypeOf(first)).len + std.meta.fields(@TypeOf(second)).len]Config {
-    const first_len = std.meta.fields(@TypeOf(first)).len;
-    var result: [first_len + std.meta.fields(@TypeOf(second)).len]Config = undefined;
-    inline for (std.meta.fields(@TypeOf(first)), result[0..first_len]) |field, *config| {
-        config.* = .{ .name = @tagName(@field(first, field.name)[0]), .string = @field(first, field.name)[1] };
-    }
-    inline for (std.meta.fields(@TypeOf(second)), result[first_len..]) |field, *config| {
-        config.* = .{ .name = @tagName(@field(second, field.name)[0]), .string = @field(second, field.name)[1] };
-    }
-    return result;
 }
 
 const python_src = struct {
@@ -1134,8 +1066,6 @@ fn ci(
     upstream: *std.Build.Dependency,
     ci_step: *std.Build.Step,
     args: struct {
-        replace_exe: *std.Build.Step.Compile,
-        makesetup_exe: *std.Build.Step.Compile,
         configquery_exe: *std.Build.Step.Compile,
         stage2_frozen_mods: Stage2FrozenMods,
         frozen_headers: []const std.Build.LazyPath,
@@ -1167,7 +1097,7 @@ fn ci(
         const target = b.resolveTargetQuery(try std.Target.Query.parse(
             .{ .arch_os_abi = ci_target.triple },
         ));
-        const optimize: std.builtin.OptimizeMode = .ReleaseFast;
+        const optimize: std.lang.OptimizeMode = .ReleaseFast;
         const target_dest_dir: std.Build.InstallDir = .{ .custom = ci_target.triple };
         const install = b.step(b.fmt("install-{s}", .{ci_target.triple}), "");
         ci_step.dependOn(install);
@@ -1182,14 +1112,10 @@ fn ci(
                 .optimize = optimize,
             })) |dep| dep.artifact("openssl") else null) else null,
         };
-        const makesetup = addMakesetup(b, version, upstream, libs, .{
-            .os_tag = target.result.os.tag,
-            .replace_exe = args.replace_exe,
-            .makesetup_exe = args.makesetup_exe,
-        });
+        const setup = addMakesetup(b, version, upstream, libs, target.result.os.tag);
         const exe = addPythonExe(b, upstream, target, optimize, .{
             .name = "python",
-            .makesetup_out = makesetup,
+            .makesetup_out = setup,
             .pyconfig = try addPyconfig(b, version, upstream, target, libs, args.configquery_exe),
             .stage = .{ .final = .{
                 .stage2 = args.stage2_frozen_mods,
@@ -1222,4 +1148,5 @@ fn concat(allocator: std.mem.Allocator, lists: []const []const []const u8) []con
 }
 
 const std = @import("std");
-const ConfigHeaderExt = @import("ConfigHeaderExt.zig");
+const makesetup = @import("makesetup.zig");
+const replace = @import("replace.zig");
