@@ -30,7 +30,6 @@
         "configquery.zig",
         "makesetup.zig",
         "replace.zig",
-        "ConfigHeaderExt.zig",
         "config-*",
     },
 }

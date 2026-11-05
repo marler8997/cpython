@@ -467,10 +467,7 @@ fn addPythonExe(
         .windows => "\"win32\"",
         else => std.debug.panic("todo: populate PLATFORM for os '{s}'", .{@tagName(target.result.os.tag)}),
     });
-    switch (args.pyconfig.header) {
-        .path => |path| exe.root_module.addIncludePath(path.dirname()),
-        .config_header => |h| exe.root_module.addConfigHeader(h),
-    }
+    exe.root_module.addIncludePath(args.pyconfig.include_dir);
     exe.root_module.addIncludePath(upstream.path("."));
     exe.root_module.addIncludePath(upstream.path("Include"));
     exe.root_module.addIncludePath(upstream.path("Include/internal"));
@@ -661,10 +658,7 @@ fn addPythonExe(
 const Pyconfig = struct {
     version: Version,
     libs: Libs,
-    header: union(enum) {
-        path: std.Build.LazyPath,
-        config_header: *std.Build.Step.ConfigHeader,
-    },
+    include_dir: std.Build.LazyPath,
 };
 
 const Libs = struct {
@@ -684,13 +678,11 @@ fn addPyconfig(
     if (t.os.tag == .windows) return .{
         .version = version,
         .libs = libs,
-        .header = .{ .path = upstream.path("PC/pyconfig.h") },
+        .include_dir = upstream.path("PC"),
     };
 
-    const config_header = b.addConfigHeader(.{
-        .style = .{ .autoconf_undef = upstream.path("pyconfig.h.in") },
-        .include_path = "pyconfig.h",
-    }, .{
+    var static_config: std.Io.Writer.Allocating = .init(b.allocator);
+    addConfigValues(&static_config.writer, .{
         .ALIGNOF_LONG = 8,
         .ALIGNOF_SIZE_T = 8,
         .DOUBLE_IS_LITTLE_ENDIAN_IEEE754 = 1,
@@ -824,14 +816,14 @@ fn addPyconfig(
         .HAVE_GCC_ASM_FOR_X87 = have(t.cpu.arch == .x86_64 or t.cpu.arch == .x86),
         // Readline type (static configuration, not function test)
         .HAVE_RL_COMPDISP_FUNC_T = null,
-    });
+    }) catch @panic("OOM");
     switch (version) {
-        .@"3.11.13" => config_header.addValues(.{
+        .@"3.11.13" => addConfigValues(&static_config.writer, .{
             .PY_FORMAT_SIZE_T = "z",
             .TIME_WITH_SYS_TIME = 1,
             .FLOAT_WORDS_BIGENDIAN = null,
-        }),
-        .@"3.12.11" => config_header.addValues(.{
+        }) catch @panic("OOM"),
+        .@"3.12.11" => addConfigValues(&static_config.writer, .{
             .ALIGNOF_MAX_ALIGN_T = @as(u32, switch (t.cpu.arch) {
                 .x86_64, .aarch64 => 16,
                 .x86, .arm => 8,
@@ -855,11 +847,13 @@ fn addPyconfig(
             .__STDC_WANT_IEC_60559_TYPES_EXT__ = null,
             .__STDC_WANT_LIB_EXT2__ = null,
             .__STDC_WANT_MATH_SPEC_FUNCS__ = null,
-        }),
+        }) catch @panic("OOM"),
     }
 
-    {
+    const pyconfig_h = blk: {
         const run = b.addRunArtifact(configquery_exe);
+        run.addArg("--template");
+        run.addFileArg(upstream.path("pyconfig.h.in"));
         run.addArg("--zig-exe");
         run.addArg(b.graph.zig_exe);
         if (b.cache_root.path) |cache_root| {
@@ -872,20 +866,38 @@ fn addPyconfig(
         run.addArg(try target.query.serializeCpuAlloc(b.allocator));
         if (libs.zlib) |zlib| run.addPrefixedDirectoryArg("-I", zlib.getEmittedIncludeTree());
         if (libs.openssl) |openssl| run.addPrefixedDirectoryArg("-I", openssl.getEmittedIncludeTree());
+        run.addFileArg(b.addWriteFiles().add("config-static", static_config.written()));
         run.addFileArg(b.path("config-common"));
         run.addFileArg(switch (version) {
             .@"3.11.13" => b.path("config-3.11.13"),
             .@"3.12.11" => b.path("config-3.12.11"),
         });
+        run.addArg("--log");
+        _ = run.addOutputFileArg("configquery.log");
         run.addArg("-o");
-        ConfigHeaderExt.addFile(config_header, run.addOutputFileArg("config"));
-    }
+        break :blk run.addOutputFileArg("pyconfig.h");
+    };
 
     return .{
         .version = version,
         .libs = libs,
-        .header = .{ .config_header = config_header },
+        .include_dir = pyconfig_h.dirname(),
     };
+}
+
+/// Writes each field of `values` as a configquery literal line "NAME VALUE".
+fn addConfigValues(w: *std.Io.Writer, values: anytype) error{WriteFailed}!void {
+    inline for (std.meta.fields(@TypeOf(values))) |field| {
+        const value = @field(values, field.name);
+        switch (@typeInfo(field.type)) {
+            .null => try w.print("{s} undef\n", .{field.name}),
+            .int, .comptime_int => try w.print("{s} {d}\n", .{ field.name, value }),
+            .enum_literal => try w.print("{s} :{s}\n", .{ field.name, @tagName(value) }),
+            .optional => if (value) |v| try w.print("{s} {d}\n", .{ field.name, v }) else try w.print("{s} undef\n", .{field.name}),
+            .pointer => try w.print("{s} \"{s}\"\n", .{ field.name, value }),
+            else => @compileError("unsupported config value type: " ++ @typeName(field.type)),
+        }
+    }
 }
 
 fn have(x: bool) ?u1 {
@@ -1222,4 +1234,3 @@ fn concat(allocator: std.mem.Allocator, lists: []const []const []const u8) []con
 }
 
 const std = @import("std");
-const ConfigHeaderExt = @import("ConfigHeaderExt.zig");
